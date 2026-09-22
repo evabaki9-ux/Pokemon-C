@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "game.h"
+#include "save.h"
 
 static int failures = 0;
 
@@ -108,6 +109,40 @@ int main(void)
     CHECK(MAPS[MAP_TOWN].w == 28 && MAPS[MAP_TOWN].h == 24, "town dimensions");
     CHECK(MAPS[MAP_ROUTE1].nencs == 5, "route1 encounter table");
     CHECK(MAPS[MAP_HOUSE].npcs != NULL, "house has mom");
+
+    /* save round-trip */
+    memset(&g, 0, sizeof(g));
+    g.map = MAP_ROUTE1;
+    g.px = 160; g.py = 208; g.dir = 2;
+    g.party_n = 2;
+    creature_init(&g.party[0], SP_EMBERIT, 7, 0);
+    creature_init(&g.party[1], SP_FLUFFIT, 3, 0);
+    g.active_slot = 0;
+    g.bag_n = 2;
+    g.bag[0] = IT_ORB;
+    g.bag[1] = IT_POTION;
+    g.money = 999;
+    g.flags = FLAG_STARTER | FLAG_T1;
+    g.dex_seen[0] = 0x0F;
+    g.heal_map = MAP_HEAL;
+    g.heal_x = 3; g.heal_y = 5;
+    uint8_t sbuf[SAVE_MAX];
+    size_t sn = save_encode(sbuf, sizeof(sbuf));
+    CHECK(sn > 0 && sn < SAVE_MAX, "save encodes");
+    memset(&g, 0, sizeof(g));
+    CHECK(save_decode(sbuf, sn), "save decodes");
+    CHECK(g.party_n == 2 && g.party[1].species == SP_FLUFFIT &&
+          g.party[0].level == 7 && g.party[0].hp == g.party[0].stats[ST_HP],
+          "party restored");
+    CHECK(g.money == 999 && g.flags == (FLAG_STARTER | FLAG_T1) &&
+          g.dex_seen[0] == 0x0F, "progress restored");
+    CHECK(g.map == MAP_ROUTE1 && g.dir == 2 && g.px == 160 && g.py == 208,
+          "position restored");
+    CHECK(g.heal_map == MAP_HEAL && g.heal_x == 3, "heal point restored");
+    CHECK(g.mode == MODE_OVERWORLD, "loaded into overworld mode");
+    CHECK(!save_decode(sbuf + 1, sn - 1), "corrupt magic rejected");
+    sbuf[11] = 99; /* party_n field out of range */
+    CHECK(!save_decode(sbuf, sn), "bad party_n rejected");
 
     if (failures == 0)
         printf("\nALL TESTS PASSED\n");

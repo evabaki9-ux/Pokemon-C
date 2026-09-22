@@ -12,10 +12,9 @@
 #include "ui.h"
 #include "overworld.h"
 #include "battle.h"
+#include "save.h"
 
-GameState g;
 Input g_in;
-BattleRequest g_battle_req;
 
 static SDL_Renderer *rend;
 static bool running = true;

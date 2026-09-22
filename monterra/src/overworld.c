@@ -6,6 +6,7 @@
 #include "assets.h"
 #include "text.h"
 #include "ui.h"
+#include "save.h"
 
 /* ---- tile helpers ---- */
 static int tile_at(int x, int y)
@@ -326,6 +327,9 @@ static void handle_after_dialog(void)
         after_dialog = AD_NONE;
         if (result == 0) {
             heal_party();
+            g.heal_map = MAP_HEAL;
+            g.heal_x = 3;
+            g.heal_y = 5;
             const char *healed[] = {
                 "NURSE: ...All done!",
                 "Your creatures are fully",
