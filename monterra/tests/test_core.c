@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "game.h"
+#include "data/music.h"
 #include "save.h"
 
 static int failures = 0;
@@ -153,6 +154,31 @@ int main(void)
               "healthy partner found");
         CHECK(party_pick_cursor(p2, 2, 0, true, 1, 1) == 1,
               "cursor already on pickable stays in range");
+    }
+
+    /* music data sanity (audio engine data layer) */
+    {
+        CHECK(MUSIC[MUS_TITLE].bpm >= 40 && MUSIC[MUS_TITLE].bpm <= 240,
+              "title tempo sane");
+        for (int t2 = MUS_TITLE; t2 < MUS_COUNT; t2++) {
+            const MusicTrack *tr = &MUSIC[t2];
+            CHECK(tr->len[0] > 0 && tr->len[0] <= MUS_MAXLEN,
+                  "track has melody steps");
+            for (int ch = 0; ch < MUS_CHAN; ch++) {
+                CHECK(tr->len[ch] <= MUS_MAXLEN, "channel length bounded");
+                for (int i2 = 0; i2 < tr->len[ch]; i2++) {
+                    int8_t v = tr->mel[ch][i2];
+                    CHECK(v >= -1 && v <= 108, "note value in range");
+                }
+            }
+        }
+        CHECK(music_for_map(MAP_ROUTE1) == MUS_ROUTE, "route gets route music");
+        CHECK(music_for_map(MAP_TOWN) == MUS_TOWN, "town gets town music");
+        for (int s2 = SFX_BLIP; s2 < SFX_COUNT; s2++) {
+            CHECK(SFX[s2].f0 >= 20 && SFX[s2].f1 <= 9000, "sfx freqs sane");
+            CHECK(SFX[s2].ms >= 10 && SFX[s2].ms <= 2000, "sfx length sane");
+            CHECK(SFX[s2].vol >= 1 && SFX[s2].vol <= 15, "sfx volume sane");
+        }
     }
 
     /* save round-trip */

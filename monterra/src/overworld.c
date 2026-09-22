@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "overworld.h"
+#include "audio.h"
+#include "data/music.h"
 #include "game.h"
 #include "assets.h"
 #include "text.h"
@@ -116,6 +118,7 @@ static void talk_nurse(void)
 static void talk_mom(void)
 {
     heal_party();
+    audio_sfx(SFX_HEAL);
     const char *lines[] = {
         "MOM: Off on an adventure?",
         "Let me tidy you up... there!",
@@ -160,6 +163,7 @@ static void check_trainer_sight(void)
             if (x == ptx && y == pty) {
                 spotted_npc = n;
                 spotted_frames = 36;
+                audio_sfx(SFX_SPOT);
                 return;
             }
         }
@@ -301,8 +305,9 @@ static void roll_encounter(void)
 static struct { bool open; int cursor; } menu;
 static int pending_potion = -1;
 
-static const char *const MENU_ITEMS[] = { "PARTNERS", "BAG", "CLOSE" };
-#define MENU_N 3
+static const char *const MENU_ITEMS[] = { "PARTNERS", "BAG", "SOUND", "CLOSE" };
+#define MENU_N 4
+#define MENU_SOUND 2
 
 /* ---- update ---- */
 void ow_reset(uint8_t map, uint8_t x, uint8_t y)
@@ -362,6 +367,7 @@ static void handle_after_dialog(void)
         after_dialog = AD_NONE;
         if (result == 0) {
             heal_party();
+            audio_sfx(SFX_HEAL);
             g.heal_map = MAP_HEAL;
             g.heal_x = 3;
             g.heal_y = 5;
@@ -386,8 +392,12 @@ static void handle_after_dialog(void)
     }
 }
 
+static int bump_cd;
+
 static void try_move(void)
 {
+    if (bump_cd > 0)
+        bump_cd--;
     int dx = 0, dy = 0;
     if (g_in.held[BTN_UP]) { dx = 0; dy = -1; g.dir = 1; }
     else if (g_in.held[BTN_DOWN]) { dx = 0; dy = 1; g.dir = 0; }
@@ -409,8 +419,13 @@ static void try_move(void)
         g.hop = 1;
         return;
     }
-    if (blocked(nx, ny))
+    if (blocked(nx, ny)) {
+        if (bump_cd <= 0) {
+            audio_sfx(SFX_BUMP);
+            bump_cd = 24;
+        }
         return;
+    }
     g.moving = 1;
     g.dx_steps = 16;
     g.dx = dx;
@@ -482,13 +497,15 @@ void ow_update(void)
         return;
     }
     if (menu.open) {
-        if (g_in.pressed[BTN_UP]) menu.cursor = (menu.cursor + MENU_N - 1) % MENU_N;
-        if (g_in.pressed[BTN_DOWN]) menu.cursor = (menu.cursor + 1) % MENU_N;
+        if (g_in.pressed[BTN_UP]) { menu.cursor = (menu.cursor + MENU_N - 1) % MENU_N; audio_sfx(SFX_BLIP); }
+        if (g_in.pressed[BTN_DOWN]) { menu.cursor = (menu.cursor + 1) % MENU_N; audio_sfx(SFX_BLIP); }
         if (g_in.pressed[BTN_B] || g_in.pressed[BTN_START]) menu.open = false;
         if (g_in.pressed[BTN_A]) {
             menu.open = false;
             if (menu.cursor == 0) party_open(PM_VIEW);
             else if (menu.cursor == 1) bag_open(BM_OVERWORLD);
+            else if (menu.cursor == MENU_SOUND)
+                audio_toggle_mute();
         }
         return;
     }
@@ -631,7 +648,9 @@ void ow_draw(SDL_Renderer *r)
         for (int i = 0; i < MENU_N; i++) {
             if (i == menu.cursor)
                 draw_text(r, SCREEN_W - w + 2, 10 + i * 14, ">", red, 1);
-            draw_text(r, SCREEN_W - w + 12, 10 + i * 14, MENU_ITEMS[i], dark, 1);
+            const char *label =
+                (i == MENU_SOUND) ? (audio_muted() ? "SOUND:OFF" : "SOUND:ON") : MENU_ITEMS[i];
+            draw_text(r, SCREEN_W - w + 12, 10 + i * 14, label, dark, 1);
         }
     }
 

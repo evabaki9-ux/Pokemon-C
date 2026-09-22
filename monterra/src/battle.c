@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include "battle.h"
+#include "audio.h"
+#include "data/music.h"
 #include "game.h"
 #include "assets.h"
 #include "text.h"
@@ -148,6 +150,7 @@ static void battle_common_init(void)
 void battle_start_wild(uint8_t species, uint8_t level)
 {
     battle_common_init();
+    audio_play_music(MUS_BATTLE);
     creature_init(&B.enemy, species, level, 1);
     dex_see(species);
     B.ehp_show = (int16_t)B.enemy.hp;
@@ -159,6 +162,7 @@ void battle_start_wild(uint8_t species, uint8_t level)
 void battle_start_trainer(const TrainerDef *t)
 {
     battle_common_init();
+    audio_play_music(MUS_BATTLE);
     B.trainer = true;
     B.tdef = t;
     creature_init(&B.enemy, t->species[0], t->levels[0], 1);
@@ -247,6 +251,8 @@ static void resolve_move(uint8_t actor, uint8_t slot)
     }
 
     DamageResult r = move_damage(att, def, ast, dst, att->moves[slot]);
+    if (!r.missed && r.damage > 0)
+        audio_sfx(SFX_HIT);
     if (r.missed) {
         q_msgf("%s's attack missed!", an);
         return;
@@ -445,6 +451,7 @@ static void resolve_end_turn(void)
 /* ---- catch ---- */
 static void resolve_throw(uint8_t item)
 {
+    audio_sfx(SFX_THROW);
     if (B.trainer) {
         q_msg("The trainer blocked the ORB!", NULL);
         q_msg("Don't be a thief!", NULL);
@@ -556,6 +563,7 @@ void battle_update(void)
                 q_pop();
             return;
         case BS_FAINT:
+            audio_sfx(SFX_FAINT);
             if (s->a == 0) {
                 B.faint_off[0] += 6;
                 if (B.faint_off[0] >= 64) { B.faint_off[0] = 200; q_pop(); }
@@ -647,10 +655,10 @@ void battle_update(void)
     switch (B.phase) {
     case BP_MENU:
         /* 2x2 grid, row-major: bit0 = column, bit1 = row */
-        if (g_in.pressed[BTN_LEFT]) B.menu_cur = (uint8_t)(B.menu_cur & ~1u);
-        if (g_in.pressed[BTN_RIGHT]) B.menu_cur = (uint8_t)(B.menu_cur | 1u);
-        if (g_in.pressed[BTN_UP]) B.menu_cur = (uint8_t)(B.menu_cur & ~2u);
-        if (g_in.pressed[BTN_DOWN]) B.menu_cur = (uint8_t)(B.menu_cur | 2u);
+        if (g_in.pressed[BTN_LEFT]) { B.menu_cur = (uint8_t)(B.menu_cur & ~1u); audio_sfx(SFX_BLIP); }
+        if (g_in.pressed[BTN_RIGHT]) { B.menu_cur = (uint8_t)(B.menu_cur | 1u); audio_sfx(SFX_BLIP); }
+        if (g_in.pressed[BTN_UP]) { B.menu_cur = (uint8_t)(B.menu_cur & ~2u); audio_sfx(SFX_BLIP); }
+        if (g_in.pressed[BTN_DOWN]) { B.menu_cur = (uint8_t)(B.menu_cur | 2u); audio_sfx(SFX_BLIP); }
         if (g_in.pressed[BTN_A]) {
             B.phase = BP_EXEC;
             if (B.menu_cur == 0) {

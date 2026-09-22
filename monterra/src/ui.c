@@ -1,6 +1,8 @@
 #include <string.h>
 #include <stdio.h>
 #include "ui.h"
+#include "audio.h"
+#include "data/music.h"
 #include "text.h"
 #include "assets.h"
 
@@ -256,16 +258,15 @@ void party_update(void)
     if (g_in.pressed[BTN_UP]) {
         int c = party_pick_cursor(g.party, g.party_n, exclude, need_hp,
                                   pm.cursor, -1);
-        if (c >= 0)
-            pm.cursor = c;
+        if (c >= 0) { pm.cursor = c; audio_sfx(SFX_BLIP); }
     }
     if (g_in.pressed[BTN_DOWN]) {
         int c = party_pick_cursor(g.party, g.party_n, exclude, need_hp,
                                   pm.cursor, 1);
-        if (c >= 0)
-            pm.cursor = c;
+        if (c >= 0) { pm.cursor = c; audio_sfx(SFX_BLIP); }
     }
     if (g_in.pressed[BTN_A] && pickable(pm.cursor)) {
+        audio_sfx(SFX_CONFIRM);
         pm.result = pm.cursor;
         pm.active = false;
     } else if (g_in.pressed[BTN_B]) {
@@ -338,10 +339,11 @@ void bag_update(void)
         return;
     int n = g.bag_n;
     if (n > 0) {
-        if (g_in.pressed[BTN_UP]) bm.cursor = (bm.cursor + n - 1) % n;
-        if (g_in.pressed[BTN_DOWN]) bm.cursor = (bm.cursor + 1) % n;
+        if (g_in.pressed[BTN_UP]) { bm.cursor = (bm.cursor + n - 1) % n; audio_sfx(SFX_BLIP); }
+        if (g_in.pressed[BTN_DOWN]) { bm.cursor = (bm.cursor + 1) % n; audio_sfx(SFX_BLIP); }
     }
     if (g_in.pressed[BTN_A] && n > 0) {
+        audio_sfx(SFX_CONFIRM);
         bm.result = g.bag[bm.cursor];
         bm.active = false;
     } else if (g_in.pressed[BTN_B]) {
@@ -400,10 +402,14 @@ void shop_update(void)
         sm.msg_frames--;
     else
         sm.msg[0] = 0;
-    if (g_in.pressed[BTN_UP])
+    if (g_in.pressed[BTN_UP]) {
         sm.cursor = (sm.cursor + NUM_ITEM_IDS - 1) % NUM_ITEM_IDS;
-    if (g_in.pressed[BTN_DOWN])
+        audio_sfx(SFX_BLIP);
+    }
+    if (g_in.pressed[BTN_DOWN]) {
         sm.cursor = (sm.cursor + 1) % NUM_ITEM_IDS;
+        audio_sfx(SFX_BLIP);
+    }
     if (g_in.pressed[BTN_A]) {
         uint16_t price = ITEMS[sm.cursor].price;
         if (g.money < price) {

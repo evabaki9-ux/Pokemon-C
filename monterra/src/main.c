@@ -7,6 +7,8 @@
 #include <emscripten.h>
 #endif
 #include "game.h"
+#include "audio.h"
+#include "data/music.h"
 #include "assets.h"
 #include "text.h"
 #include "ui.h"
@@ -116,6 +118,8 @@ static void cb_start_battle(void)
 static void cb_end_battle(void)
 {
     uint8_t result = battle_result();
+    if (result == 3)
+        audio_play_jingle(MUS_VICTORY);
     g.mode = MODE_OVERWORLD;
     if (result == 1) { /* whiteout */
         heal_party();
@@ -260,6 +264,12 @@ static void frame(void)
         fade_update();
     }
 
+    /* music follows game context */
+    if (g.mode == MODE_TITLE)
+        audio_play_music(MUS_TITLE);
+    else if (g.mode == MODE_OVERWORLD)
+        audio_play_music(music_for_map(g.map));
+
     /* render */
     if (g.mode == MODE_TITLE)
         title_draw(rend);
@@ -278,10 +288,14 @@ int main(int argc, char **argv)
 {
     (void)argc;
     (void)argv;
-    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-        fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
-        return 1;
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0) {
+        /* keep running without sound if only audio failed */
+        if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+                fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
+            return 1;
+        }
     }
+    audio_init();
     srand((unsigned)time(NULL));
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
     SDL_Window *win = SDL_CreateWindow("MONTERRA",
@@ -318,6 +332,7 @@ int main(int argc, char **argv)
     assets_free();
     SDL_DestroyRenderer(rend);
     SDL_DestroyWindow(win);
+    audio_quit();
     SDL_Quit();
     return 0;
 }
