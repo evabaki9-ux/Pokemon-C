@@ -7,6 +7,7 @@
 <style>
   html, body {
     margin: 0; padding: 0; height: 100%;
+    overflow: hidden;
     background: #0c0c14;
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
@@ -29,6 +30,11 @@
 <div id="hint">Z / ENTER = confirm &nbsp; X = cancel &nbsp; WASD / arrows = move &nbsp; M = menu<br>
 Click the game once if keys don't respond.</div>
 <script>
+  /* keep arrow keys / space on the game: never scroll the page */
+  document.addEventListener('keydown', function (e) {
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].indexOf(e.key) >= 0)
+      e.preventDefault();
+  });
   var Module = {
     canvas: document.getElementById('canvas'),
     onRuntimeInitialized: function () {

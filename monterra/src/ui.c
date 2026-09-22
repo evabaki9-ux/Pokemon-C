@@ -285,10 +285,10 @@ void party_draw(SDL_Renderer *r)
     draw_text(r, 10, 8, title, dark, 1);
     for (int i = 0; i < g.party_n && i < MAX_PARTY; i++) {
         const Creature *c = &g.party[i];
-        int y = 22 + i * 22;
+        int y = 20 + i * 20;
         if (i == pm.cursor) {
             SDL_SetRenderDrawColor(r, 232, 240, 248, 255);
-            SDL_Rect hl = { 6, y - 2, SCREEN_W - 12, 21 };
+            SDL_Rect hl = { 6, y - 2, SCREEN_W - 12, 19 };
             SDL_RenderFillRect(r, &hl);
             draw_text(r, 10, y + 1, ">", red, 1);
         }
@@ -304,11 +304,12 @@ void party_draw(SDL_Renderer *r)
         else if (c->ailment == AIL_SLEEP) draw_text(r, 86, y + 12, "SLP", (SDL_Color){ 120, 120, 168, 255 }, 1);
         draw_hpbar(r, 140, y + 13, 90, c->hp, c->stats[ST_HP]);
     }
-    draw_text(r, 10, SCREEN_H - 12, "Z:OK  X:BACK", dark, 1);
     if (pm.mode == PM_SWITCH &&
         !party_any_pickable(g.party, g.party_n, g.active_slot, true)) {
         SDL_Color warn = { 176, 48, 48, 255 };
-        draw_text(r, 82, SCREEN_H - 12, "NO HEALTHY SWAP!", warn, 1);
+        draw_text(r, 10, SCREEN_H - 12, "NO HEALTHY SWAP! X:BACK", warn, 1);
+    } else {
+        draw_text(r, 10, SCREEN_H - 12, "Z:OK  X:BACK", dark, 1);
     }
 }
 

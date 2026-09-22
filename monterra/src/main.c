@@ -127,11 +127,12 @@ static void cb_end_battle(void)
 
 /* ---- input ---- */
 static const struct { SDL_Keycode key; int btn; } KEYMAP[] = {
-    { SDLK_UP, BTN_UP }, { SDLK_w, BTN_UP },
-    { SDLK_DOWN, BTN_DOWN }, { SDLK_s, BTN_DOWN },
-    { SDLK_LEFT, BTN_LEFT }, { SDLK_a, BTN_LEFT },
-    { SDLK_RIGHT, BTN_RIGHT }, { SDLK_d, BTN_RIGHT },
-    { SDLK_z, BTN_A }, { SDLK_RETURN, BTN_A }, { SDLK_SPACE, BTN_A },
+    { SDLK_UP, BTN_UP }, { SDLK_KP_8, BTN_UP }, { SDLK_w, BTN_UP },
+    { SDLK_DOWN, BTN_DOWN }, { SDLK_KP_2, BTN_DOWN }, { SDLK_s, BTN_DOWN },
+    { SDLK_LEFT, BTN_LEFT }, { SDLK_KP_4, BTN_LEFT }, { SDLK_a, BTN_LEFT },
+    { SDLK_RIGHT, BTN_RIGHT }, { SDLK_KP_6, BTN_RIGHT }, { SDLK_d, BTN_RIGHT },
+    { SDLK_z, BTN_A }, { SDLK_RETURN, BTN_A }, { SDLK_KP_ENTER, BTN_A },
+    { SDLK_SPACE, BTN_A },
     { SDLK_x, BTN_B }, { SDLK_ESCAPE, BTN_B }, { SDLK_BACKSPACE, BTN_B },
     { SDLK_m, BTN_START }, { SDLK_TAB, BTN_START },
 };

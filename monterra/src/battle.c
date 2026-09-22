@@ -646,10 +646,11 @@ void battle_update(void)
 
     switch (B.phase) {
     case BP_MENU:
-        if (g_in.pressed[BTN_LEFT]) B.menu_cur = (B.menu_cur + 2) % 4;
-        if (g_in.pressed[BTN_RIGHT]) B.menu_cur = (B.menu_cur + 2) % 4;
-        if (g_in.pressed[BTN_UP]) B.menu_cur = B.menu_cur < 2 ? B.menu_cur : (uint8_t)(B.menu_cur - 2);
-        if (g_in.pressed[BTN_DOWN]) B.menu_cur = B.menu_cur < 2 ? (uint8_t)(B.menu_cur + 2) : B.menu_cur;
+        /* 2x2 grid, row-major: bit0 = column, bit1 = row */
+        if (g_in.pressed[BTN_LEFT]) B.menu_cur = (uint8_t)(B.menu_cur & ~1u);
+        if (g_in.pressed[BTN_RIGHT]) B.menu_cur = (uint8_t)(B.menu_cur | 1u);
+        if (g_in.pressed[BTN_UP]) B.menu_cur = (uint8_t)(B.menu_cur & ~2u);
+        if (g_in.pressed[BTN_DOWN]) B.menu_cur = (uint8_t)(B.menu_cur | 2u);
         if (g_in.pressed[BTN_A]) {
             B.phase = BP_EXEC;
             if (B.menu_cur == 0) {
