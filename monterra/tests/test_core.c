@@ -43,6 +43,24 @@ int main(void)
     CHECK(!r.missed || 1, "tackle resolved");
     if (!r.missed) {
         CHECK(r.damage >= 1 && r.damage <= (int)d2.hp, "damage within bounds");
+        CHECK(r.damage < (int)d2.hp, "neutral tackle does not 1HKO (eff10 bug)");
+        CHECK(r.effectiveness == 0, "neutral hit is not super effective");
+    }
+    /* fire vs bug+grass = 4x, but sane: not a x10 blowup */
+    Creature moss;
+    creature_init(&moss, SP_MOSSLING, 5, 0);
+    uint8_t ember_id = 0xFF;
+    for (uint8_t m = 0; m < NUM_MOVES; m++)
+        if (MOVES[m].type == TY_FIRE && MOVES[m].power > 0)
+            { ember_id = m; break; }
+    CHECK(ember_id != 0xFF, "found a fire damage move");
+    DamageResult rf = move_damage(&d1, &moss, none, none, ember_id);
+    if (!rf.missed) {
+        CHECK(rf.effectiveness >= 1, "fire vs bug/grass is super effective");
+        CHECK(rf.damage <= (int)moss.hp, "4x hit still bounded");
+        /* 4x of a ~5-7 base is 20-28 vs 20 HP: can KO, but must not be
+         * ~10x that (the old bug gave 100x+) */
+        CHECK(rf.damage <= 40, "4x hit is not a x10 blowup");
     }
 
     /* stat stages */

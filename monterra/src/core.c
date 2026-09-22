@@ -125,11 +125,12 @@ DamageResult move_damage(const Creature *att, const Creature *def,
         return r; /* statuses applied by battle layer */
     }
 
-    /* effectiveness */
+    /* effectiveness: product of per-type multipliers, 10 = 1.0x
+     * (chart values are x10-scaled, so divide by 10 per lookup) */
     int eff10 = 10;
-    eff10 *= type_chart_lookup(mv->type, d->type1);
+    eff10 = eff10 * type_chart_lookup(mv->type, d->type1) / 10;
     if (d->type2 != TY_NONE)
-        eff10 *= type_chart_lookup(mv->type, d->type2);
+        eff10 = eff10 * type_chart_lookup(mv->type, d->type2) / 10;
     if (eff10 == 0) {
         r.effectiveness = -2;
         r.damage = 0;
