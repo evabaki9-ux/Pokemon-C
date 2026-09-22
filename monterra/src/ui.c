@@ -1,0 +1,362 @@
+#include <string.h>
+#include <stdio.h>
+#include "ui.h"
+#include "text.h"
+#include "assets.h"
+
+Dialog g_dlg;
+
+#define TB_X 2
+#define TB_Y (SCREEN_H - TEXTBOX_H - 2)
+#define TB_W (SCREEN_W - 4)
+#define TB_H TEXTBOX_H
+
+/* ---------------------------------------------------------------- dialog */
+void dlg_start(const char *const *lines, int n)
+{
+    memset(&g_dlg, 0, sizeof(g_dlg));
+    if (n > 8) n = 8;
+    g_dlg.nlines = n;
+    for (int i = 0; i < n; i++)
+        g_dlg.lines[i] = lines[i];
+    g_dlg.active = true;
+    g_dlg.done = false;
+    g_dlg.result = -2; /* not finished */
+}
+
+void dlg_start_choice(const char *const *lines, int n,
+                      const char *const *choices, int nch)
+{
+    dlg_start(lines, n);
+    g_dlg.choice = true;
+    g_dlg.nchoices = nch > 4 ? 4 : nch;
+    for (int i = 0; i < g_dlg.nchoices; i++)
+        g_dlg.choices[i] = choices[i];
+    g_dlg.cchoice = 0;
+}
+
+static int page_len(void)
+{
+    int start = g_dlg.page * 2;
+    int n = g_dlg.nlines - start;
+    return n > 2 ? 2 : n;
+}
+
+static int page_total_chars(void)
+{
+    int len = page_len(), total = 0;
+    for (int i = 0; i < len; i++)
+        total += (int)strlen(g_dlg.lines[g_dlg.page * 2 + i]);
+    return total;
+}
+
+void dlg_update(void)
+{
+    if (!g_dlg.active)
+        return;
+    int total = page_total_chars();
+    int last_page = (g_dlg.page * 2 + page_len() >= g_dlg.nlines);
+
+    if (g_dlg.chars < total) {
+        g_dlg.chars += 2;
+        if (g_dlg.chars > total)
+            g_dlg.chars = total;
+        if (g_in.pressed[BTN_A])
+            g_dlg.chars = total;
+        return;
+    }
+    if (g_dlg.choice && last_page) {
+        if (g_in.pressed[BTN_UP]) g_dlg.cchoice--;
+        if (g_in.pressed[BTN_DOWN]) g_dlg.cchoice++;
+        if (g_dlg.cchoice < 0) g_dlg.cchoice = g_dlg.nchoices - 1;
+        if (g_dlg.cchoice >= g_dlg.nchoices) g_dlg.cchoice = 0;
+        if (g_in.pressed[BTN_A]) {
+            g_dlg.result = g_dlg.cchoice;
+            g_dlg.active = false;
+            g_dlg.done = true;
+        } else if (g_in.pressed[BTN_B]) {
+            g_dlg.result = -1;
+            g_dlg.active = false;
+            g_dlg.done = true;
+        }
+        return;
+    }
+    if (g_in.pressed[BTN_A] || g_in.pressed[BTN_B]) {
+        if (last_page) {
+            g_dlg.active = false;
+            g_dlg.done = true;
+            g_dlg.result = -1;
+        } else {
+            g_dlg.page++;
+            g_dlg.chars = 0;
+        }
+    }
+}
+
+void dlg_draw(SDL_Renderer *r)
+{
+    if (!g_dlg.active)
+        return;
+    draw_textbox(r);
+    int len = page_len();
+    int remaining = g_dlg.chars;
+    SDL_Color dark = { 56, 56, 64, 255 };
+    for (int i = 0; i < len && remaining > 0; i++) {
+        const char *line = g_dlg.lines[g_dlg.page * 2 + i];
+        int n = (int)strlen(line);
+        int show = remaining < n ? remaining : n;
+        char buf[40];
+        if (show > 38) show = 38;
+        memcpy(buf, line, (size_t)show);
+        buf[show] = 0;
+        draw_text(r, TB_X + 8, TB_Y + 7 + i * 14, buf, dark, 1);
+        remaining -= n;
+    }
+    int last_page = (g_dlg.page * 2 + len >= g_dlg.nlines);
+    bool revealed = g_dlg.chars >= page_total_chars();
+    if (revealed && !(g_dlg.choice && last_page)) {
+        SDL_Rect arrow = { TB_X + TB_W - 12, TB_Y + TB_H - 9, 6, 3 };
+        if ((g.tick >> 4) & 1)
+            arrow.y += 2;
+        SDL_SetRenderDrawColor(r, 56, 56, 64, 255);
+        SDL_RenderFillRect(r, &arrow);
+    }
+    if (g_dlg.choice && last_page && revealed) {
+        int w = 0;
+        for (int i = 0; i < g_dlg.nchoices; i++) {
+            int tw = text_width(g_dlg.choices[i], 1);
+            if (tw > w) w = tw;
+        }
+        w += 26;
+        int h = g_dlg.nchoices * 14 + 10;
+        int x = TB_X + TB_W - w - 4;
+        int y = TB_Y - h - 2;
+        draw_panel(r, x, y, w, h);
+        SDL_Color red = { 200, 48, 48, 255 };
+        for (int i = 0; i < g_dlg.nchoices; i++) {
+            if (i == g_dlg.cchoice)
+                draw_text(r, x + 14, y + 6 + i * 14, ">", red, 1);
+            draw_text(r, x + 24, y + 6 + i * 14, g_dlg.choices[i], dark, 1);
+        }
+    }
+}
+
+bool dlg_active(void)
+{
+    return g_dlg.active;
+}
+
+/* ---------------------------------------------------------------- panels */
+void draw_panel(SDL_Renderer *r, int x, int y, int w, int h)
+{
+    SDL_SetRenderDrawColor(r, 248, 248, 248, 255);
+    SDL_Rect body = { x, y, w, h };
+    SDL_RenderFillRect(r, &body);
+    SDL_SetRenderDrawColor(r, 24, 24, 32, 255);
+    SDL_Rect b1 = { x, y, w, 1 }, b2 = { x, y + h - 1, w, 1 };
+    SDL_Rect b3 = { x, y, 1, h }, b4 = { x + w - 1, y, 1, h };
+    SDL_RenderFillRect(r, &b1);
+    SDL_RenderFillRect(r, &b2);
+    SDL_RenderFillRect(r, &b3);
+    SDL_RenderFillRect(r, &b4);
+    SDL_SetRenderDrawColor(r, 168, 168, 184, 255);
+    SDL_Rect i1 = { x + 2, y + 2, w - 4, 1 };
+    SDL_RenderFillRect(r, &i1);
+}
+
+void draw_textbox(SDL_Renderer *r)
+{
+    draw_panel(r, TB_X, TB_Y, TB_W, TB_H);
+}
+
+void draw_hpbar(SDL_Renderer *r, int x, int y, int w, uint16_t cur, uint16_t max)
+{
+    SDL_Color dark = { 56, 56, 64, 255 };
+    draw_text(r, x, y - 1, "HP", dark, 1);
+    int bx = x + 18, bw = w - 18;
+    SDL_SetRenderDrawColor(r, 24, 24, 32, 255);
+    SDL_Rect border = { bx, y, bw, 5 };
+    SDL_RenderFillRect(r, &border);
+    SDL_SetRenderDrawColor(r, 96, 96, 112, 255);
+    SDL_Rect track = { bx + 1, y + 1, bw - 2, 3 };
+    SDL_RenderFillRect(r, &track);
+    uint32_t pct = max ? (uint32_t)cur * (uint32_t)(bw - 2) / max : 0;
+    if (pct > (uint32_t)(bw - 2)) pct = (uint32_t)(bw - 2);
+    uint8_t rr, gg;
+    if ((uint32_t)cur * 2 > max) { rr = 32; gg = 168; }
+    else if ((uint32_t)cur * 4 > max) { rr = 216; gg = 168; }
+    else { rr = 208; gg = 48; }
+    SDL_SetRenderDrawColor(r, rr, gg, 40, 255);
+    SDL_Rect fill = { bx + 1, y + 1, (int)pct, 3 };
+    if (pct > 0)
+        SDL_RenderFillRect(r, &fill);
+}
+
+void draw_xpbar(SDL_Renderer *r, int x, int y, int w, const Creature *c)
+{
+    uint32_t pct = 0;
+    if (c->level >= 100) {
+        pct = (uint32_t)w;
+    } else {
+        uint16_t base = xp_for_level(c->level);
+        uint16_t next = xp_for_level((uint8_t)(c->level + 1));
+        if (next > base)
+            pct = (uint32_t)(c->xp - base) * (uint32_t)w / (uint32_t)(next - base);
+    }
+    if (pct > (uint32_t)w) pct = w;
+    SDL_SetRenderDrawColor(r, 168, 168, 184, 255);
+    SDL_Rect track = { x, y, w, 2 };
+    SDL_RenderFillRect(r, &track);
+    if (pct > 0) {
+        SDL_SetRenderDrawColor(r, 64, 136, 240, 255);
+        SDL_Rect fill = { x, y, (int)pct, 2 };
+        SDL_RenderFillRect(r, &fill);
+    }
+}
+
+/* ---------------------------------------------------------------- party */
+static struct {
+    int mode;
+    int cursor;
+    int result;
+    bool active;
+} pm;
+
+void party_open(int mode)
+{
+    pm.mode = mode;
+    pm.cursor = 0;
+    pm.result = -2;
+    pm.active = true;
+}
+
+bool party_active(void) { return pm.active; }
+int party_result(void) { return pm.result; }
+
+static int pickable(int slot)
+{
+    if (slot >= g.party_n)
+        return 0;
+    if (pm.mode == PM_SWITCH)
+        return slot != g.active_slot && g.party[slot].hp > 0;
+    if (pm.mode == PM_TARGET)
+        return g.party[slot].hp > 0;
+    return 1;
+}
+
+void party_update(void)
+{
+    if (!pm.active)
+        return;
+    if (g_in.pressed[BTN_UP]) {
+        do {
+            pm.cursor = (pm.cursor + g.party_n - 1) % (g.party_n ? g.party_n : 1);
+        } while (!pickable(pm.cursor));
+    }
+    if (g_in.pressed[BTN_DOWN]) {
+        do {
+            pm.cursor = (pm.cursor + 1) % (g.party_n ? g.party_n : 1);
+        } while (!pickable(pm.cursor));
+    }
+    if (g_in.pressed[BTN_A] && pickable(pm.cursor)) {
+        pm.result = pm.cursor;
+        pm.active = false;
+    } else if (g_in.pressed[BTN_B]) {
+        pm.result = -1;
+        pm.active = false;
+    }
+}
+
+void party_draw(SDL_Renderer *r)
+{
+    if (!pm.active)
+        return;
+    draw_panel(r, 2, 2, SCREEN_W - 4, SCREEN_H - 4);
+    SDL_Color dark = { 56, 56, 64, 255 };
+    SDL_Color red = { 200, 48, 48, 255 };
+    const char *title = (pm.mode == PM_VIEW) ? "PARTNERS" : "CHOOSE ONE!";
+    draw_text(r, 10, 8, title, dark, 1);
+    for (int i = 0; i < g.party_n && i < MAX_PARTY; i++) {
+        const Creature *c = &g.party[i];
+        int y = 22 + i * 22;
+        if (i == pm.cursor) {
+            SDL_SetRenderDrawColor(r, 232, 240, 248, 255);
+            SDL_Rect hl = { 6, y - 2, SCREEN_W - 12, 21 };
+            SDL_RenderFillRect(r, &hl);
+            draw_text(r, 10, y + 1, ">", red, 1);
+        }
+        char buf[32];
+        snprintf(buf, sizeof(buf), "%s", SPECIES[c->species].name);
+        draw_text(r, 20, y + 1, buf, dark, 1);
+        snprintf(buf, sizeof(buf), "Lv%-3u", c->level);
+        draw_text(r, 130, y + 1, buf, dark, 1);
+        snprintf(buf, sizeof(buf), "%3u/%-3u", c->hp, c->stats[ST_HP]);
+        draw_text(r, 20, y + 12, buf, dark, 1);
+        if (c->ailment == AIL_BURN) draw_text(r, 86, y + 12, "BRN", (SDL_Color){ 224, 96, 32, 255 }, 1);
+        else if (c->ailment == AIL_PARA) draw_text(r, 86, y + 12, "PAR", (SDL_Color){ 200, 176, 32, 255 }, 1);
+        else if (c->ailment == AIL_SLEEP) draw_text(r, 86, y + 12, "SLP", (SDL_Color){ 120, 120, 168, 255 }, 1);
+        draw_hpbar(r, 140, y + 13, 90, c->hp, c->stats[ST_HP]);
+    }
+    draw_text(r, 10, SCREEN_H - 12, "Z:OK  X:BACK", dark, 1);
+}
+
+/* ---------------------------------------------------------------- bag */
+static struct {
+    int mode;
+    int cursor;
+    int result;
+    bool active;
+} bm;
+
+void bag_open(int mode)
+{
+    bm.mode = mode;
+    bm.cursor = 0;
+    bm.result = -2;
+    bm.active = true;
+}
+
+bool bag_active(void) { return bm.active; }
+int bag_result(void) { return bm.result; }
+
+void bag_update(void)
+{
+    if (!bm.active)
+        return;
+    int n = g.bag_n;
+    if (n > 0) {
+        if (g_in.pressed[BTN_UP]) bm.cursor = (bm.cursor + n - 1) % n;
+        if (g_in.pressed[BTN_DOWN]) bm.cursor = (bm.cursor + 1) % n;
+    }
+    if (g_in.pressed[BTN_A] && n > 0) {
+        bm.result = g.bag[bm.cursor];
+        bm.active = false;
+    } else if (g_in.pressed[BTN_B]) {
+        bm.result = -1;
+        bm.active = false;
+    }
+}
+
+void bag_draw(SDL_Renderer *r)
+{
+    if (!bm.active)
+        return;
+    draw_panel(r, 2, 2, SCREEN_W - 4, SCREEN_H - 4);
+    SDL_Color dark = { 56, 56, 64, 255 };
+    SDL_Color red = { 200, 48, 48, 255 };
+    draw_text(r, 10, 8, "BAG", dark, 1);
+    if (g.bag_n == 0)
+        draw_text(r, 20, 30, "It's empty...", dark, 1);
+    for (int i = 0; i < g.bag_n; i++) {
+        int y = 24 + i * 16;
+        if (i == bm.cursor)
+            draw_text(r, 10, y, ">", red, 1);
+        char buf[40];
+        snprintf(buf, sizeof(buf), "%-14s x%u", ITEMS[g.bag[i]].name,
+                 bag_count(g.bag[i]));
+        draw_text(r, 22, y, buf, dark, 1);
+    }
+    char buf[24];
+    snprintf(buf, sizeof(buf), "MONEY $%u", g.money);
+    draw_text(r, 10, SCREEN_H - 12, buf, dark, 1);
+}

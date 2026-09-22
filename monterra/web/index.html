@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MONTERRA - Legends of the Veldt</title>
+<style>
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: #0c0c14;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    font-family: monospace; color: #9aa;
+  }
+  #wrap { position: relative; }
+  canvas {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    width: 720px; max-width: 96vw; height: auto;
+    outline: 2px solid #26263a;
+    background: #000;
+  }
+  #hint { margin-top: 10px; font-size: 12px; letter-spacing: 1px; }
+  b { color: #ffd76a; }
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="canvas" tabindex="0"></canvas></div>
+<div id="hint">Z / ENTER = confirm &nbsp; X = cancel &nbsp; WASD / arrows = move &nbsp; M = menu<br>
+Click the game once if keys don't respond.</div>
+<script>
+  var Module = {
+    canvas: document.getElementById('canvas'),
+    onRuntimeInitialized: function () {
+      document.getElementById('canvas').focus();
+    }
+  };
+</script>
+<script src="monterra.js"></script>
+</body>
+</html>

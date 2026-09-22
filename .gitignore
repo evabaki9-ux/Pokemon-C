@@ -54,3 +54,7 @@ out/
 target/
 tmp/
 *.log
+
+# game build artifacts
+monterra/bin/
+monterra/tools/*_preview.png
