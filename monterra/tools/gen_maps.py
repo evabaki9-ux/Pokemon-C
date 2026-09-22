@@ -46,6 +46,16 @@ HEAL = [
     "I________I",
     "IIIMIIIIII",
 ]
+MART = [
+    "IIIIIIIIII",
+    "I________I",
+    "I__K__K__I",
+    "INNNNN__pI",
+    "I________I",
+    "I_r______I",
+    "I________I",
+    "IIIMIIIIII",
+]
 TOWN = [
     "T" * 13 + "gg" + "T" * 13,                            # 0  north gap -> ROUTE 1
     "T" + "g" * 26 + "T",                                  # 1
@@ -54,9 +64,9 @@ TOWN = [
     "T" + "g" * 16 + "(^^^^)" + "g" * 4 + "T",             # 4  care station roof
     "T" + "gg" + "(^^^)" + "g" * 9 + "#OHOO#" + "g" * 4 + "T",  # 5  house roof / care wall
     "T" + "gg" + "#ODO#" + "g" * 19 + "T",                 # 6  house wall (door x5)
-    "T" + "g" * 4 + "P" + "g" * 13 + "P" + "g" * 7 + "T",  # 7
-    "T" + "g" * 4 + "P" + "g" * 13 + "P" + "g" * 7 + "T",  # 8
-    "T" + "g" * 4 + "P" * 15 + "g" * 7 + "T",              # 9  main east-west path
+    "T" + "g" * 4 + "P" + "g" * 13 + "P" + "g" + "(^^^^)" + "T",  # 7  mart roof (x21-26)
+    "T" + "g" * 4 + "P" + "g" * 13 + "P" + "g" + "#ODOO#" + "T",  # 8  mart wall, door x23
+    "T" + "g" * 4 + "P" * 19 + "g" * 3 + "T",                     # 9  main path reaches mart door
     "T" + "g" * 12 + "PP" + "g" * 12 + "T",                # 10
     "T" + "g" * 12 + "PP" + "g" * 12 + "T",                # 11
     "T" + "g" * 12 + "PP" + "g" * 12 + "T",                # 12
@@ -115,6 +125,7 @@ MAPS_ASCII = {
     2: ("CARE STATION", HEAL),
     3: ("VERDAN TOWN", TOWN),
     4: ("ROUTE 1", ROUTE1),
+    5: ("VERDAN MART", MART),
 }
 
 # ---------------------------------------------------------------- data
@@ -164,11 +175,13 @@ WARPS = {
         (5, 6, 0, 5, 8),    # player house door
         (19, 5, 2, 3, 7),   # care station door
         (13, 14, 1, 6, 9),  # lab door
+        (23, 8, 5, 3, 7),   # mart door
     ],
     0: [(5, 8, 3, 5, 7)],    # house mat -> town below door
     1: [(6, 9, 3, 13, 15)],  # lab mat -> town below lab door
     2: [(3, 7, 3, 19, 6)],   # heal mat -> town below heal door
     4: [(10, 33, 3, 13, 1), (11, 33, 3, 14, 1)],
+    5: [(3, 7, 3, 23, 9)],   # mart mat -> town below mart door
 }
 NPCS = {
     0: [  # house
@@ -189,6 +202,9 @@ NPCS = {
         {"x": 11, "y": 14, "dir": 2, "sprite": 4, "role": 4, "lines": dlg_liam_pre,
          "trainer": TRAINER_LIAM},
         {"x": 10, "y": 3, "dir": 0, "sprite": 1, "role": 5, "lines": dlg_hiker},
+    ],
+    5: [  # mart
+        {"x": 2, "y": 2, "dir": 0, "sprite": 1, "role": 6, "lines": None},
     ],
 }
 SIGNS = {

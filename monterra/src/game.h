@@ -83,6 +83,7 @@ typedef struct {
     const char *name;
     uint8_t kind;
     int16_t power; /* heal amount or ball bonus x10 */
+    uint16_t price;
 } Item;
 
 /* ---- creature instance ---- */
@@ -109,7 +110,7 @@ enum {
 };
 
 /* ---- maps ---- */
-enum { MAP_HOUSE, MAP_LAB, MAP_HEAL, MAP_TOWN, MAP_ROUTE1 };
+enum { MAP_HOUSE, MAP_LAB, MAP_HEAL, MAP_TOWN, MAP_ROUTE1, MAP_MART };
 
 typedef struct {
     uint8_t x, y, dest_map, dest_x, dest_y;

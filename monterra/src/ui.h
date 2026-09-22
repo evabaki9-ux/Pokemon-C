@@ -52,4 +52,10 @@ void bag_draw(SDL_Renderer *r);
 bool bag_active(void);
 int bag_result(void); /* item id picked, -1 cancelled */
 
+/* ---- shop ---- */
+void shop_open(void);
+bool shop_active(void);
+void shop_update(void);
+void shop_draw(SDL_Renderer *r);
+
 #endif

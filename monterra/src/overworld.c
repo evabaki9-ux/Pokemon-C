@@ -575,4 +575,5 @@ void ow_draw(SDL_Renderer *r)
     dlg_draw(r);
     party_draw(r);
     bag_draw(r);
+    shop_draw(r);
 }

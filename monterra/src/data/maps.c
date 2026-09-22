@@ -45,9 +45,9 @@ static const char *const rows_verdan_town[] = {
     "Tgggggggggggggggg(^^^^)ggggT",
     "Tgg(^^^)ggggggggg#OHOO#ggggT",
     "Tgg#ODO#gggggggggggggggggggT",
-    "TggggPgggggggggggggPgggggggT",
-    "TggggPgggggggggggggPgggggggT",
-    "TggggPPPPPPPPPPPPPPPgggggggT",
+    "TggggPgggggggggggggPg(^^^^)T",
+    "TggggPgggggggggggggPg#ODOO#T",
+    "TggggPPPPPPPPPPPPPPPPPPPgggT",
     "TggggggggggggPPggggggggggggT",
     "TggggggggggggPPggggggggggggT",
     "TggggggggggggPPggggggggggggT",
@@ -101,6 +101,17 @@ static const char *const rows_route_1[] = {
     "TTTTTTTTTT..TTTTTTTT",
 };
 
+static const char *const rows_verdan_mart[] = {
+    "IIIIIIIIII",
+    "I________I",
+    "I__K__K__I",
+    "INNNNN__pI",
+    "I________I",
+    "I_r______I",
+    "I________I",
+    "IIIMIIIIII",
+};
+
 static const Warp warps_0[] = {
     {5, 8, 3, 5, 7},
 };
@@ -119,11 +130,16 @@ static const Warp warps_3[] = {
     {5, 6, 0, 5, 8},
     {19, 5, 2, 3, 7},
     {13, 14, 1, 6, 9},
+    {23, 8, 5, 3, 7},
 };
 
 static const Warp warps_4[] = {
     {10, 33, 3, 13, 1},
     {11, 33, 3, 14, 1},
+};
+
+static const Warp warps_5[] = {
+    {3, 7, 3, 23, 9},
 };
 
 static const char *const dlg_kid_pond[] = {
@@ -177,6 +193,10 @@ static const NpcDef npcs_4[] = {
     {10, 3, 0, 1, 5, dlg_hiker, NULL},
 };
 
+static const NpcDef npcs_5[] = {
+    {2, 2, 0, 1, 6, NULL, NULL},
+};
+
 static const SignDef signs_3[] = {
     {15, 16, "VERDAN TOWN\nWhere journeys sprout."},
 };
@@ -197,6 +217,7 @@ const MapDef MAPS[NUM_MAPS] = {
     { "PLAYER'S HOUSE", 11, 9, rows_players_house, warps_0, 1, npcs_0, 1, NULL, 0, NULL, 0, 0 },
     { "MAPLE'S LAB", 13, 10, rows_maples_lab, warps_1, 1, npcs_1, 2, NULL, 0, NULL, 0, 0 },
     { "CARE STATION", 10, 8, rows_care_station, warps_2, 1, npcs_2, 1, NULL, 0, NULL, 0, 0 },
-    { "VERDAN TOWN", 28, 24, rows_verdan_town, warps_3, 5, npcs_3, 2, signs_3, 1, NULL, 0, 0 },
+    { "VERDAN TOWN", 28, 24, rows_verdan_town, warps_3, 6, npcs_3, 2, signs_3, 1, NULL, 0, 0 },
     { "ROUTE 1", 20, 34, rows_route_1, warps_4, 2, npcs_4, 2, signs_4, 1, encs_4, 5, 12 },
+    { "VERDAN MART", 10, 8, rows_verdan_mart, warps_5, 1, npcs_5, 1, NULL, 0, NULL, 0, 0 },
 };

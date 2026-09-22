@@ -360,3 +360,76 @@ void bag_draw(SDL_Renderer *r)
     snprintf(buf, sizeof(buf), "MONEY $%u", g.money);
     draw_text(r, 10, SCREEN_H - 12, buf, dark, 1);
 }
+
+/* ---------------------------------------------------------------- shop */
+static struct {
+    bool active;
+    int cursor;
+    int msg_frames;
+    char msg[40];
+} sm;
+
+void shop_open(void)
+{
+    sm.active = true;
+    sm.cursor = 0;
+    sm.msg[0] = 0;
+    sm.msg_frames = 0;
+}
+
+bool shop_active(void) { return sm.active; }
+
+void shop_update(void)
+{
+    if (!sm.active)
+        return;
+    if (sm.msg_frames > 0)
+        sm.msg_frames--;
+    else
+        sm.msg[0] = 0;
+    if (g_in.pressed[BTN_UP])
+        sm.cursor = (sm.cursor + NUM_ITEM_IDS - 1) % NUM_ITEM_IDS;
+    if (g_in.pressed[BTN_DOWN])
+        sm.cursor = (sm.cursor + 1) % NUM_ITEM_IDS;
+    if (g_in.pressed[BTN_A]) {
+        uint16_t price = ITEMS[sm.cursor].price;
+        if (g.money < price) {
+            snprintf(sm.msg, sizeof(sm.msg), "Not enough money!");
+        } else if (g.bag_n >= MAX_BAG) {
+            snprintf(sm.msg, sizeof(sm.msg), "Bag is full!");
+        } else {
+            bag_add((uint8_t)sm.cursor);
+            g.money = (uint16_t)(g.money - price);
+            snprintf(sm.msg, sizeof(sm.msg), "Here you go! Thanks!");
+        }
+        sm.msg_frames = 90;
+    } else if (g_in.pressed[BTN_B]) {
+        sm.active = false;
+    }
+}
+
+void shop_draw(SDL_Renderer *r)
+{
+    if (!sm.active)
+        return;
+    draw_panel(r, 2, 2, SCREEN_W - 4, SCREEN_H - 4);
+    SDL_Color dark = { 56, 56, 64, 255 };
+    SDL_Color red = { 200, 48, 48, 255 };
+    draw_text(r, 10, 8, "MART", dark, 1);
+    for (int i = 0; i < NUM_ITEM_IDS; i++) {
+        int y = 26 + i * 18;
+        if (i == sm.cursor)
+            draw_text(r, 10, y, ">", red, 1);
+        char buf[48];
+        snprintf(buf, sizeof(buf), "%-13s $%u", ITEMS[i].name, ITEMS[i].price);
+        draw_text(r, 22, y, buf, dark, 1);
+        snprintf(buf, sizeof(buf), "HAVE x%u", bag_count((uint8_t)i));
+        draw_text(r, 168, y, buf, dark, 1);
+    }
+    char buf[40];
+    snprintf(buf, sizeof(buf), "MONEY $%u", g.money);
+    draw_text(r, 10, SCREEN_H - 22, buf, dark, 1);
+    draw_text(r, 10, SCREEN_H - 12, "Z:BUY  X:EXIT", dark, 1);
+    if (sm.msg[0])
+        draw_text(r, 112, SCREEN_H - 22, sm.msg, red, 1);
+}

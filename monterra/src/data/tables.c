@@ -72,10 +72,10 @@ int type_chart_lookup(uint8_t atk, uint8_t def)
 
 /* species art keys: file in assets/creatures, fallback chain for evolutions */
 const Item ITEMS[NUM_ITEM_IDS] = {
-    { "POTION", IK_HEAL, 20 },
-    { "SUPER POTION", IK_HEAL, 50 },
-    { "ORB", IK_ORB, 10 },      /* ball bonus x10 */
-    { "GREAT ORB", IK_ORB, 15 },
+    { "POTION", IK_HEAL, 20, 300 },
+    { "SUPER POTION", IK_HEAL, 50, 700 },
+    { "ORB", IK_ORB, 10, 200 },      /* ball bonus x10 */
+    { "GREAT ORB", IK_ORB, 15, 600 },
 };
 
 const char *const SPECIES_ART[NUM_SPECIES] = {
