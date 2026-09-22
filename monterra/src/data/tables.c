@@ -80,16 +80,13 @@ const Item ITEMS[NUM_ITEM_IDS] = {
 
 const char *const SPECIES_ART[NUM_SPECIES] = {
     "emberit", "dewlin", "sproutle", "fluffit", "pebbly", "zephird",
-    "mossling", "sparkit", "emberit", "dewlin", "sproutle", "fluffit",
+    "mossling", "sparkit", "pyrogon", "torrentol", "verdantis", "loppin",
 };
 /* tint evolved placeholders so they read as different creatures */
 const uint8_t SPECIES_TINT[NUM_SPECIES][3] = {
     {255,255,255}, {255,255,255}, {255,255,255}, {255,255,255},
     {255,255,255}, {255,255,255}, {255,255,255}, {255,255,255},
-    {255, 200, 160},   /* PYROGON: warmer */
-    {160, 210, 255},   /* TORRENTOL: cooler */
-    {190, 255, 170},   /* VERDANTIS: greener */
-    {255, 190, 230},   /* LOPPIN: pinker */
+    {255,255,255}, {255,255,255}, {255,255,255}, {255,255,255},
 };
 
 #define S(name, t1, t2, hp, at, df, sa, sd, sp, cr, xp, el, et, ...) \
