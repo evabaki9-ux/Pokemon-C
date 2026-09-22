@@ -47,7 +47,7 @@ static bool blocked(int x, int y)
 }
 
 /* ---- dialog after-actions ---- */
-enum { AD_NONE, AD_TRAINER, AD_PROF, AD_NURSE };
+enum { AD_NONE, AD_TRAINER, AD_PROF, AD_NURSE, AD_SHOP };
 static int after_dialog = AD_NONE;
 
 static const char *const LIAM_POST[] = {
@@ -156,6 +156,16 @@ static void interact(void)
         case ROLE_NURSE: talk_nurse(); return;
         case ROLE_PROF: talk_prof(); return;
         case ROLE_TRAINER: talk_trainer(npc); return;
+        case ROLE_SHOP: {
+            const char *intro[] = {
+                "CLERK: Welcome to the",
+                "VERDAN MART! Stock up on",
+                "supplies for the road!",
+            };
+            dlg_start(intro, 3);
+            after_dialog = AD_SHOP;
+            return;
+        }
         default: break;
         }
         if (npc->lines) {
@@ -342,6 +352,10 @@ static void handle_after_dialog(void)
         }
         break;
     }
+    case AD_SHOP:
+        after_dialog = AD_NONE;
+        shop_open();
+        break;
     default:
         break;
     }
@@ -426,6 +440,10 @@ void ow_update(void)
                 dlg_start(lines, 1);
             }
         }
+        return;
+    }
+    if (shop_active()) {
+        shop_update();
         return;
     }
     if (menu.open) {

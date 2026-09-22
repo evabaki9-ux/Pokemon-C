@@ -16,7 +16,7 @@
 #define MAX_BAG 8
 #define NUM_MOVES 24
 #define NUM_ITEMS 4
-#define NUM_MAPS 5
+#define NUM_MAPS 6
 #define TEXTBOX_H 44
 #define FONT_W 8
 #define FONT_H 8
@@ -116,7 +116,7 @@ typedef struct {
     uint8_t x, y, dest_map, dest_x, dest_y;
 } Warp;
 
-enum { ROLE_NONE, ROLE_MOM, ROLE_NURSE, ROLE_PROF, ROLE_TRAINER, ROLE_BLOCKER };
+enum { ROLE_NONE, ROLE_MOM, ROLE_NURSE, ROLE_PROF, ROLE_TRAINER, ROLE_BLOCKER, ROLE_SHOP };
 
 typedef struct {
     const char *name;
