@@ -58,3 +58,4 @@ tmp/
 # game build artifacts
 monterra/bin/
 monterra/tools/*_preview.png
+.sudo_as_admin_successful
