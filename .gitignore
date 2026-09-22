@@ -1,0 +1,56 @@
+# ---- OS / editor ----
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/*
+!.vscode/settings.json.example
+
+# ---- Secrets / local config ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.netrc
+.git-credentials
+secrets/
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# ---- Node / JS / TS ----
+node_modules/
+.npm/
+.pnpm-store/
+.next/
+.nuxt/
+.output/
+.parcel-cache/
+.svelte-kit/
+.vite/
+.turbo/
+*.tsbuildinfo
+npm-debug.log*
+yarn-error.log*
+
+# ---- Other build outputs / caches ----
+.cache/
+.local/
+out/
+target/
+tmp/
+*.log
