@@ -50,11 +50,9 @@ static bool blocked(int x, int y)
 enum { AD_NONE, AD_TRAINER, AD_PROF, AD_NURSE, AD_SHOP };
 static int after_dialog = AD_NONE;
 
-static const char *const LIAM_POST[] = {
-    "Your partner is so strong!",
-    "I need to train more!",
-    NULL,
-};
+static const TrainerDef *pending_trainer;
+static const NpcDef *spotted_npc;
+static int spotted_frames;
 
 static void split_sign(const char *text, const char *lines[8], int *n)
 {
@@ -130,13 +128,42 @@ static void talk_mom(void)
 
 static void talk_trainer(const NpcDef *npc)
 {
-    if (g.flags & FLAG_T1) {
-        say(LIAM_POST);
+    if (g.flags & npc->trainer->flag) {
+        say(npc->trainer->post_lines);
         after_dialog = AD_NONE;
         return;
     }
+    pending_trainer = npc->trainer;
     say(npc->lines);
     after_dialog = AD_TRAINER;
+}
+
+/* line-of-sight: trainers spot the player up to 4 tiles ahead */
+static void check_trainer_sight(void)
+{
+    const MapDef *m = &MAPS[g.map];
+    int ptx = (g.px + 8) / 16, pty = (g.py + 15) / 16;
+    static const int sdx[4] = { 0, 0, -1, 1 };
+    static const int sdy[4] = { 1, -1, 0, 0 };
+    for (int i = 0; i < m->nnpcs; i++) {
+        const NpcDef *n = &m->npcs[i];
+        if (n->role != ROLE_TRAINER || !n->trainer)
+            continue;
+        if (g.flags & n->trainer->flag)
+            continue;
+        int x = n->x, y = n->y;
+        for (int step = 0; step < 4; step++) {
+            x += sdx[n->dir];
+            y += sdy[n->dir];
+            if (tile_solid(tile_at(x, y)) || npc_at(x, y))
+                break;
+            if (x == ptx && y == pty) {
+                spotted_npc = n;
+                spotted_frames = 36;
+                return;
+            }
+        }
+    }
 }
 
 static void interact(void)
@@ -217,6 +244,8 @@ static void warp_do(void)
     g.moving = 0;
     g.dx_steps = 0;
     g.hop = 0;
+    spotted_frames = 0;
+    spotted_npc = NULL;
 }
 
 static void check_warp(int tx, int ty)
@@ -297,16 +326,12 @@ static void handle_after_dialog(void)
     switch (after_dialog) {
     case AD_TRAINER:
         after_dialog = AD_NONE;
-        if (result >= 0 || result == -1) {
-            const MapDef *m = &MAPS[g.map];
-            for (int i = 0; i < m->nnpcs; i++) {
-                if (m->npcs[i].role == ROLE_TRAINER && !(g.flags & FLAG_T1)) {
-                    g_battle_req.active = 1;
-                    g_battle_req.species = 0;
-                    g_battle_req.level = 0;
-                    g_battle_req.trainer = m->npcs[i].trainer;
-                }
-            }
+        if (pending_trainer) {
+            g_battle_req.active = 1;
+            g_battle_req.species = 0;
+            g_battle_req.level = 0;
+            g_battle_req.trainer = pending_trainer;
+            pending_trainer = NULL;
         }
         break;
     case AD_PROF: {
@@ -395,6 +420,16 @@ static void try_move(void)
 
 void ow_update(void)
 {
+    /* trainer spotted the player: pause with a "!" emote */
+    if (spotted_frames > 0) {
+        spotted_frames--;
+        if (spotted_frames == 0 && spotted_npc) {
+            pending_trainer = spotted_npc->trainer;
+            say(spotted_npc->lines);
+            after_dialog = AD_TRAINER;
+        }
+        return;
+    }
     /* menus + dialogs take priority */
     if (dlg_active()) {
         dlg_update();
@@ -470,6 +505,8 @@ void ow_update(void)
             check_warp(tx, ty);
             if (!warp_pending && !hop)
                 roll_encounter();
+            if (!warp_pending && g_battle_req.active == 0)
+                check_trainer_sight();
         }
         return;
     }
@@ -576,6 +613,14 @@ void ow_draw(SDL_Renderer *r)
         const NpcDef *n = &m->npcs[i];
         if (n->y * 16 >= g.py)
             draw_entity(r, n->sprite, n->dir, 0, n->x * 16, n->y * 16, cx, cy);
+    }
+
+    if (spotted_frames > 0 && spotted_npc) {
+        int ex = spotted_npc->x * 16 - cx + 3;
+        int ey = spotted_npc->y * 16 - cy - 13;
+        SDL_Color red = { 200, 48, 48, 255 };
+        draw_panel(r, ex, ey, 10, 12);
+        draw_text(r, ex + 1, ey + 2, "!", red, 1);
     }
 
     if (menu.open) {

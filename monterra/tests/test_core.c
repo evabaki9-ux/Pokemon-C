@@ -108,6 +108,10 @@ int main(void)
     /* maps compiled */
     CHECK(MAPS[MAP_TOWN].w == 28 && MAPS[MAP_TOWN].h == 24, "town dimensions");
     CHECK(MAPS[MAP_ROUTE1].nencs == 5, "route1 encounter table");
+    CHECK(MAPS[MAP_ROUTE1].nnpcs == 3, "route1 has liam, maya, hiker");
+    CHECK(MAPS[MAP_ROUTE1].npcs[0].trainer->flag == 2 &&
+          MAPS[MAP_ROUTE1].npcs[1].trainer->flag == 4,
+          "trainer defeat flags wired");
     CHECK(MAPS[MAP_HOUSE].npcs != NULL, "house has mom");
 
     /* save round-trip */

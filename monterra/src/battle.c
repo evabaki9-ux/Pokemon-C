@@ -97,6 +97,11 @@ static const char *ename(void) { return SPECIES[B.enemy.species].name; }
 bool battle_over(void) { return B.over; }
 uint8_t battle_result(void) { return B.result; }
 
+uint8_t battle_trainer_flag(void)
+{
+    return (B.trainer && B.tdef) ? B.tdef->flag : 0;
+}
+
 /* ---- message helpers ---- */
 static const char *pool_put(const char *s)
 {

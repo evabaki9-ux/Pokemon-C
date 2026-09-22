@@ -9,6 +9,7 @@ void battle_start_trainer(const TrainerDef *t);
 void battle_update(void);
 void battle_draw(SDL_Renderer *r);
 bool battle_over(void);
+uint8_t battle_trainer_flag(void); /* progress flag of the trainer fought */
 uint8_t battle_result(void); /* 0 win/escape, 1 whiteout, 2 caught, 3 trainer win */
 
 #endif

@@ -161,12 +161,37 @@ dlg_liam_pre = [
     "stronger!",
     None,
 ]
+dlg_liam_post = [
+    "Your partner is so strong!",
+    "I need to train more!",
+    None,
+]
+dlg_maya_pre = [
+    "PICNICKER MAYA: This is my",
+    "favorite picnic spot!",
+    "Let's battle for it!",
+    None,
+]
+dlg_maya_post = [
+    "Fine, you can share the",
+    "spot. Picnics are better",
+    "with friends anyway!",
+    None,
+]
 
 TRAINER_LIAM = {
     "name": "CAMPER LIAM", "sprite": 4,
     "party": [3, 5],  # FLUFFIT, ZEPHIRD
     "levels": [4, 4], "reward": 320,
+    "post": "dlg_liam_post", "flag": 2,  # FLAG_T1
 }
+TRAINER_MAYA = {
+    "name": "PICNICKER MAYA", "sprite": 4,
+    "party": [6, 4],  # MOSSLING, PEBBLY
+    "levels": [5, 5], "reward": 240,
+    "post": "dlg_maya_post", "flag": 4,  # FLAG_T2
+}
+TRAINERS = [("liam", TRAINER_LIAM), ("maya", TRAINER_MAYA)]
 
 # map id -> warps (x, y, dest_map, dest_x, dest_y)
 WARPS = {
@@ -200,7 +225,9 @@ NPCS = {
     ],
     4: [  # route 1
         {"x": 11, "y": 14, "dir": 2, "sprite": 4, "role": 4, "lines": dlg_liam_pre,
-         "trainer": TRAINER_LIAM},
+         "trainer": "liam"},
+        {"x": 12, "y": 22, "dir": 2, "sprite": 4, "role": 4, "lines": dlg_maya_pre,
+         "trainer": "maya"},
         {"x": 10, "y": 3, "dir": 0, "sprite": 1, "role": 5, "lines": dlg_hiker},
     ],
     5: [  # mart
@@ -284,7 +311,8 @@ def emit():
     dlg_map = {
         "dlg_kid_pond": dlg_kid_pond, "dlg_assistant": dlg_assistant,
         "dlg_hiker": dlg_hiker, "dlg_villager": dlg_villager,
-        "dlg_liam_pre": dlg_liam_pre,
+        "dlg_liam_pre": dlg_liam_pre, "dlg_liam_post": dlg_liam_post,
+        "dlg_maya_pre": dlg_maya_pre, "dlg_maya_post": dlg_maya_post,
     }
     for ident, lines in dlg_map.items():
         parts.append(f"static const char *const {ident}[] = {{")
@@ -293,18 +321,18 @@ def emit():
                 parts.append(f"    {c_str(l)},")
         parts.append("    NULL};")
     parts.append("")
-    t = TRAINER_LIAM
-    parts.append(
-        f"static const TrainerDef trainer_liam = {{ \"{t['name']}\", {t['sprite']}, "
-        f"{{ {', '.join(map(str, t['party']))} }}, {{ {', '.join(map(str, t['levels']))} }}, "
-        f"{len(t['party'])}, {t['reward']} }};")
+    for key, t in TRAINERS:
+        parts.append(
+            f"static const TrainerDef trainer_{key} = {{ \"{t['name']}\", {t['sprite']}, "
+            f"{{ {', '.join(map(str, t['party']))} }}, {{ {', '.join(map(str, t['levels']))} }}, "
+            f"{len(t['party'])}, {t['reward']}, {t['post']}, {t['flag']} }};")
     parts.append("")
     for mid in sorted(NPCS):
         parts.append(f"static const NpcDef npcs_{mid}[] = {{")
         for npc in NPCS[mid]:
             lines = "NULL" if npc["lines"] is None else \
                 [k for k, v in dlg_map.items() if v is npc["lines"]][0]
-            tr = "NULL" if "trainer" not in npc else "&trainer_liam"
+            tr = "NULL" if "trainer" not in npc else f"&trainer_{npc['trainer']}"
             parts.append(
                 f"    {{{npc['x']}, {npc['y']}, {npc['dir']}, {npc['sprite']}, "
                 f"{npc['role']}, {lines}, {tr}}},")

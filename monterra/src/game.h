@@ -125,6 +125,8 @@ typedef struct {
     uint8_t levels[3];
     uint8_t count;
     uint16_t reward;
+    const char *const *post_lines; /* talk again after defeat */
+    uint8_t flag;                  /* progress flag set on defeat */
 } TrainerDef;
 
 typedef struct {

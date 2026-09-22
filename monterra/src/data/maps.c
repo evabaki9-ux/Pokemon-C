@@ -167,8 +167,23 @@ static const char *const dlg_liam_pre[] = {
     "Let's see whose partner is",
     "stronger!",
     NULL};
+static const char *const dlg_liam_post[] = {
+    "Your partner is so strong!",
+    "I need to train more!",
+    NULL};
+static const char *const dlg_maya_pre[] = {
+    "PICNICKER MAYA: This is my",
+    "favorite picnic spot!",
+    "Let's battle for it!",
+    NULL};
+static const char *const dlg_maya_post[] = {
+    "Fine, you can share the",
+    "spot. Picnics are better",
+    "with friends anyway!",
+    NULL};
 
-static const TrainerDef trainer_liam = { "CAMPER LIAM", 4, { 3, 5 }, { 4, 4 }, 2, 320 };
+static const TrainerDef trainer_liam = { "CAMPER LIAM", 4, { 3, 5 }, { 4, 4 }, 2, 320, dlg_liam_post, 2 };
+static const TrainerDef trainer_maya = { "PICNICKER MAYA", 4, { 6, 4 }, { 5, 5 }, 2, 240, dlg_maya_post, 4 };
 
 static const NpcDef npcs_0[] = {
     {5, 4, 0, 2, 1, NULL, NULL},
@@ -190,6 +205,7 @@ static const NpcDef npcs_3[] = {
 
 static const NpcDef npcs_4[] = {
     {11, 14, 2, 4, 4, dlg_liam_pre, &trainer_liam},
+    {12, 22, 2, 4, 4, dlg_maya_pre, &trainer_maya},
     {10, 3, 0, 1, 5, dlg_hiker, NULL},
 };
 
@@ -218,6 +234,6 @@ const MapDef MAPS[NUM_MAPS] = {
     { "MAPLE'S LAB", 13, 10, rows_maples_lab, warps_1, 1, npcs_1, 2, NULL, 0, NULL, 0, 0 },
     { "CARE STATION", 10, 8, rows_care_station, warps_2, 1, npcs_2, 1, NULL, 0, NULL, 0, 0 },
     { "VERDAN TOWN", 28, 24, rows_verdan_town, warps_3, 6, npcs_3, 2, signs_3, 1, NULL, 0, 0 },
-    { "ROUTE 1", 20, 34, rows_route_1, warps_4, 2, npcs_4, 2, signs_4, 1, encs_4, 5, 12 },
+    { "ROUTE 1", 20, 34, rows_route_1, warps_4, 2, npcs_4, 3, signs_4, 1, encs_4, 5, 12 },
     { "VERDAN MART", 10, 8, rows_verdan_mart, warps_5, 1, npcs_5, 1, NULL, 0, NULL, 0, 0 },
 };

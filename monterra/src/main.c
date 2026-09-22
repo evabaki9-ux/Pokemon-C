@@ -121,7 +121,7 @@ static void cb_end_battle(void)
         heal_party();
         ow_reset(g.heal_map, g.heal_x, g.heal_y);
     } else if (result == 3) {
-        g.flags |= FLAG_T1;
+        g.flags |= battle_trainer_flag();
     }
 }
 
