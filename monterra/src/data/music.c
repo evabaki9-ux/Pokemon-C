@@ -162,6 +162,7 @@ int music_for_map(uint8_t map)
 {
     switch (map) {
     case MAP_ROUTE1:
+    case MAP_ROUTE2:
         return MUS_ROUTE;
     case MAP_HOUSE:
     case MAP_LAB:

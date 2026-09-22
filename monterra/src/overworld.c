@@ -16,7 +16,14 @@ static int tile_at(int x, int y)
     const MapDef *m = &MAPS[g.map];
     if (x < 0 || y < 0 || x >= m->w || y >= m->h)
         return TI_TREE;
-    return m->rows[y][x];
+    char c = m->rows[y][x];
+    /* the landslide rocks on ROUTE 1 are cleared once both route
+     * trainers are beaten (opens the road to ROUTE 2) */
+    if (g.map == MAP_ROUTE1 &&
+        (g.flags & (FLAG_T1 | FLAG_T2)) == (FLAG_T1 | FLAG_T2) &&
+        y >= 1 && y <= 2 && x >= 10 && x <= 12)
+        c = 'P';
+    return c;
 }
 
 static bool tile_solid(int t)
@@ -30,11 +37,20 @@ static bool tile_solid(int t)
     }
 }
 
+static bool npc_present(const NpcDef *n)
+{
+    /* a blocker with satisfied need_flags has left */
+    if (n->role == ROLE_BLOCKER && n->need_flags &&
+        (g.flags & n->need_flags) == n->need_flags)
+        return false;
+    return true;
+}
+
 static const NpcDef *npc_at(int x, int y)
 {
     const MapDef *m = &MAPS[g.map];
     for (int i = 0; i < m->nnpcs; i++)
-        if (m->npcs[i].x == x && m->npcs[i].y == y)
+        if (m->npcs[i].x == x && m->npcs[i].y == y && npc_present(&m->npcs[i]))
             return &m->npcs[i];
     return NULL;
 }
@@ -150,7 +166,7 @@ static void check_trainer_sight(void)
     static const int sdy[4] = { 1, -1, 0, 0 };
     for (int i = 0; i < m->nnpcs; i++) {
         const NpcDef *n = &m->npcs[i];
-        if (n->role != ROLE_TRAINER || !n->trainer)
+        if (n->role != ROLE_TRAINER || !n->trainer || !npc_present(n))
             continue;
         if (g.flags & n->trainer->flag)
             continue;
@@ -621,13 +637,15 @@ void ow_draw(SDL_Renderer *r)
     /* npcs */
     for (int i = 0; i < m->nnpcs; i++) {
         const NpcDef *n = &m->npcs[i];
-        if (n->y * 16 < g.py)
+        if (npc_present(n) && n->y * 16 < g.py)
             draw_entity(r, n->sprite, n->dir, 0, n->x * 16, n->y * 16, cx, cy);
     }
     int pframe = g.moving ? ((g.tick >> 3) & 1) : 0;
     draw_entity(r, 0, g.dir, pframe, g.px, g.py + hop_off, cx, cy);
     for (int i = 0; i < m->nnpcs; i++) {
         const NpcDef *n = &m->npcs[i];
+        if (!npc_present(n))
+            continue;
         if (n->y * 16 >= g.py)
             draw_entity(r, n->sprite, n->dir, 0, n->x * 16, n->y * 16, cx, cy);
     }

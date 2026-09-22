@@ -10,6 +10,8 @@ void battle_update(void);
 void battle_draw(SDL_Renderer *r);
 bool battle_over(void);
 uint8_t battle_trainer_flag(void); /* progress flag of the trainer fought */
+int battle_enemy_hp(void);
+int battle_player_hp(void);
 uint8_t battle_result(void); /* 0 win/escape, 1 whiteout, 2 caught, 3 trainer win */
 
 #endif

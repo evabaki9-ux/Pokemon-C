@@ -16,7 +16,7 @@
 #define MAX_BAG 8
 #define NUM_MOVES 24
 #define NUM_ITEMS 4
-#define NUM_MAPS 6
+#define NUM_MAPS 7
 #define TEXTBOX_H 44
 #define FONT_W 8
 #define FONT_H 8
@@ -110,7 +110,7 @@ enum {
 };
 
 /* ---- maps ---- */
-enum { MAP_HOUSE, MAP_LAB, MAP_HEAL, MAP_TOWN, MAP_ROUTE1, MAP_MART };
+enum { MAP_HOUSE, MAP_LAB, MAP_HEAL, MAP_TOWN, MAP_ROUTE1, MAP_MART, MAP_ROUTE2 };
 
 typedef struct {
     uint8_t x, y, dest_map, dest_x, dest_y;
@@ -133,6 +133,7 @@ typedef struct {
     uint8_t x, y, dir, sprite, role;
     const char *const *lines; /* null-terminated array of const char* */
     const TrainerDef *trainer;
+    uint8_t need_flags; /* blocker npc vanishes once these flags are set */
 } NpcDef;
 
 typedef struct {
@@ -185,6 +186,9 @@ enum {
     FLAG_STARTER = 1 << 0,   /* chose a starter */
     FLAG_T1 = 1 << 1,        /* route trainer defeated */
     FLAG_T2 = 1 << 2,        /* route exit hiker */
+    FLAG_T3 = 1 << 3,        /* route 2: scout denim */
+    FLAG_T4 = 1 << 4,        /* route 2: hiker bram */
+    FLAG_KEEPER = 1 << 5,    /* route 2: keeper iris beaten */
 };
 
 typedef struct {

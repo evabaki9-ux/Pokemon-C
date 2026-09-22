@@ -97,6 +97,8 @@ static const char *pname(void) { return SPECIES[pc()->species].name; }
 static const char *ename(void) { return SPECIES[B.enemy.species].name; }
 
 bool battle_over(void) { return B.over; }
+int battle_enemy_hp(void) { return B.enemy.hp; }
+int battle_player_hp(void) { return pc()->hp; }
 uint8_t battle_result(void) { return B.result; }
 
 uint8_t battle_trainer_flag(void)

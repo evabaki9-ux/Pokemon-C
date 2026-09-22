@@ -128,6 +128,20 @@ int main(void)
     CHECK(MAPS[MAP_TOWN].w == 28 && MAPS[MAP_TOWN].h == 24, "town dimensions");
     CHECK(MAPS[MAP_ROUTE1].nencs == 5, "route1 encounter table");
     CHECK(MAPS[MAP_ROUTE1].nnpcs == 3, "route1 has liam, maya, hiker");
+    CHECK(MAPS[MAP_ROUTE1].nwarps == 4, "route1 has town + route2 warps");
+    CHECK(MAPS[MAP_ROUTE2].nnpcs == 3, "route2 has denim, bram, iris");
+    CHECK(MAPS[MAP_ROUTE2].nencs == 9, "route2 encounter table");
+    {
+        int boss = 0, blocker = 0;
+        for (int i = 0; i < MAPS[MAP_ROUTE2].nnpcs; i++)
+            if (MAPS[MAP_ROUTE2].npcs[i].trainer)
+                boss = MAPS[MAP_ROUTE2].npcs[i].trainer->flag;
+        for (int i = 0; i < MAPS[MAP_ROUTE1].nnpcs; i++)
+            if (MAPS[MAP_ROUTE1].npcs[i].role == ROLE_BLOCKER)
+                blocker = MAPS[MAP_ROUTE1].npcs[i].need_flags;
+        CHECK(boss == 32, "keeper iris sets the boss flag");
+        CHECK(blocker == 6, "hiker leaves once both trainers beaten");
+    }
     CHECK(MAPS[MAP_ROUTE1].npcs[0].trainer->flag == 2 &&
           MAPS[MAP_ROUTE1].npcs[1].trainer->flag == 4,
           "trainer defeat flags wired");

@@ -65,7 +65,7 @@ static const char *const rows_verdan_town[] = {
 };
 
 static const char *const rows_route_1[] = {
-    "TTTTTTTTTTTTTTTTTTTT",
+    "TTTTTTTTTT..TTTTTTTT",
     "TgggggggggRRRggggggT",
     "TgggggggggRRRggggggT",
     "Tggg,,gggg,,gggggggT",
@@ -112,6 +112,35 @@ static const char *const rows_verdan_mart[] = {
     "IIIMIIIIII",
 };
 
+static const char *const rows_route_2[] = {
+    "TTTTTTTTTTTTTTTTTTTT",
+    "TgggggggggPPggggggST",
+    "TgggggggggPPgggggggT",
+    "Tgggg,,gggPPgggggggT",
+    "Tgggg,,gggPPgggggggT",
+    "TgggggggggPPgggggggT",
+    "Tgg\"\"\"\"\"\"gPPgggggggT",
+    "Tgg\"\"\"\"\"\"gPPgggggggT",
+    "Tgg\"\"\"\"\"\"gPPgggggggT",
+    "Tgg\"\"\"\"\"\"gPPgggggggT",
+    "TgggggggggPPgggggggT",
+    "TgggggggggPPgggsWWsT",
+    "TgggggggggPPgggsWWsT",
+    "TgggggggggPPggggssgT",
+    "Tggggg\"\"\"gPPgggggggT",
+    "Tggggg\"\"\"gPPgggggggT",
+    "Tggggg\"\"\"gPPgggggggT",
+    "TgggggggggPPLLLLLLgT",
+    "TgggggggggPPgggggggT",
+    "Tgg\"\"\"\"\"\"gPPgggggggT",
+    "Tgg\"\"\"\"\"\"gPPgggggggT",
+    "Tgg\"\"\"\"\"\"gPPgggggggT",
+    "Tgg\"\"\"\"\"\"gPPgggggggT",
+    "TgggggggggPPgggggggT",
+    "TgggggggggPPggggggST",
+    "TTTTTTTTTT..TTTTTTTT",
+};
+
 static const Warp warps_0[] = {
     {5, 8, 3, 5, 7},
 };
@@ -136,10 +165,17 @@ static const Warp warps_3[] = {
 static const Warp warps_4[] = {
     {10, 33, 3, 13, 1},
     {11, 33, 3, 14, 1},
+    {10, 0, 6, 10, 24},
+    {11, 0, 6, 11, 24},
 };
 
 static const Warp warps_5[] = {
     {3, 7, 3, 23, 9},
+};
+
+static const Warp warps_6[] = {
+    {10, 25, 4, 10, 1},
+    {11, 25, 4, 11, 1},
 };
 
 static const char *const dlg_kid_pond[] = {
@@ -181,36 +217,75 @@ static const char *const dlg_maya_post[] = {
     "spot. Picnics are better",
     "with friends anyway!",
     NULL};
+static const char *const dlg_denim_pre[] = {
+    "SCOUT DENIM: This is my",
+    "patrol route! Nobody",
+    "passes without a battle!",
+    NULL};
+static const char *const dlg_denim_post[] = {
+    "The wilds up here are",
+    "tough. Train hard, kid!",
+    NULL};
+static const char *const dlg_bram_pre[] = {
+    "HIKER BRAM: These rocks?",
+    "I carried them here",
+    "myself! Show me strength!",
+    NULL};
+static const char *const dlg_bram_post[] = {
+    "Strong! The pass treats",
+    "the strong kindly.",
+    NULL};
+static const char *const dlg_iris_pre[] = {
+    "FOREST KEEPER IRIS:",
+    "The creatures of this",
+    "pass answer to me.",
+    "Prove your bond - battle!",
+    NULL};
+static const char *const dlg_iris_post[] = {
+    "The pass is yours to",
+    "walk. Beyond lies",
+    "Emberwood... when the",
+    "road opens. Keep growing!",
+    NULL};
 
 static const TrainerDef trainer_liam = { "CAMPER LIAM", 4, { 3, 5 }, { 4, 4 }, 2, 320, dlg_liam_post, 2 };
 static const TrainerDef trainer_maya = { "PICNICKER MAYA", 4, { 6, 4 }, { 5, 5 }, 2, 240, dlg_maya_post, 4 };
+static const TrainerDef trainer_denim = { "SCOUT DENIM", 4, { 5, 7 }, { 9, 9 }, 2, 360, dlg_denim_post, 8 };
+static const TrainerDef trainer_bram = { "HIKER BRAM", 1, { 4, 6 }, { 10, 9 }, 2, 400, dlg_bram_post, 16 };
+static const TrainerDef trainer_iris = { "KEEPER IRIS", 1, { 2, 6, 9 }, { 12, 12, 15 }, 3, 900, dlg_iris_post, 32 };
 
 static const NpcDef npcs_0[] = {
-    {5, 4, 0, 2, 1, NULL, NULL},
+    {5, 4, 0, 2, 1, NULL, NULL, 0},
 };
 
 static const NpcDef npcs_1[] = {
-    {6, 5, 0, 1, 3, NULL, NULL},
-    {3, 6, 3, 4, 0, dlg_assistant, NULL},
+    {6, 5, 0, 1, 3, NULL, NULL, 0},
+    {3, 6, 3, 4, 0, dlg_assistant, NULL, 0},
 };
 
 static const NpcDef npcs_2[] = {
-    {2, 2, 0, 3, 2, NULL, NULL},
+    {2, 2, 0, 3, 2, NULL, NULL, 0},
 };
 
 static const NpcDef npcs_3[] = {
-    {6, 16, 1, 4, 0, dlg_kid_pond, NULL},
-    {8, 20, 2, 1, 0, dlg_villager, NULL},
+    {6, 16, 1, 4, 0, dlg_kid_pond, NULL, 0},
+    {8, 20, 2, 1, 0, dlg_villager, NULL, 0},
 };
 
 static const NpcDef npcs_4[] = {
-    {11, 14, 2, 4, 4, dlg_liam_pre, &trainer_liam},
-    {12, 22, 2, 4, 4, dlg_maya_pre, &trainer_maya},
-    {10, 3, 0, 1, 5, dlg_hiker, NULL},
+    {11, 14, 2, 4, 4, dlg_liam_pre, &trainer_liam, 0},
+    {12, 22, 2, 4, 4, dlg_maya_pre, &trainer_maya, 0},
+    {10, 3, 0, 1, 5, dlg_hiker, NULL, 6},
 };
 
 static const NpcDef npcs_5[] = {
-    {2, 2, 0, 1, 6, NULL, NULL},
+    {2, 2, 0, 1, 6, NULL, NULL, 0},
+};
+
+static const NpcDef npcs_6[] = {
+    {13, 6, 2, 4, 4, dlg_denim_pre, &trainer_denim, 0},
+    {8, 14, 3, 1, 4, dlg_bram_pre, &trainer_bram, 0},
+    {13, 2, 2, 1, 4, dlg_iris_pre, &trainer_iris, 0},
 };
 
 static const SignDef signs_3[] = {
@@ -221,6 +296,11 @@ static const SignDef signs_4[] = {
     {16, 27, "ROUTE 1\nVERDAN TOWN - MT. CINDER"},
 };
 
+static const SignDef signs_6[] = {
+    {18, 24, "ROUTE 2\nEMBERWOOD PASS"},
+    {18, 1, "KEEPER'S POST\nGUARDIAN OF THE PASS"},
+};
+
 static const Encounter encs_4[] = {
     {3, 2, 4, 45},
     {5, 2, 4, 25},
@@ -229,11 +309,24 @@ static const Encounter encs_4[] = {
     {4, 3, 5, 5},
 };
 
+static const Encounter encs_6[] = {
+    {3, 8, 10, 20},
+    {5, 9, 11, 15},
+    {6, 8, 10, 15},
+    {7, 9, 11, 15},
+    {4, 10, 12, 15},
+    {10, 10, 12, 10},
+    {8, 12, 12, 4},
+    {9, 12, 12, 3},
+    {11, 12, 12, 3},
+};
+
 const MapDef MAPS[NUM_MAPS] = {
     { "PLAYER'S HOUSE", 11, 9, rows_players_house, warps_0, 1, npcs_0, 1, NULL, 0, NULL, 0, 0 },
     { "MAPLE'S LAB", 13, 10, rows_maples_lab, warps_1, 1, npcs_1, 2, NULL, 0, NULL, 0, 0 },
     { "CARE STATION", 10, 8, rows_care_station, warps_2, 1, npcs_2, 1, NULL, 0, NULL, 0, 0 },
     { "VERDAN TOWN", 28, 24, rows_verdan_town, warps_3, 6, npcs_3, 2, signs_3, 1, NULL, 0, 0 },
-    { "ROUTE 1", 20, 34, rows_route_1, warps_4, 2, npcs_4, 3, signs_4, 1, encs_4, 5, 12 },
+    { "ROUTE 1", 20, 34, rows_route_1, warps_4, 4, npcs_4, 3, signs_4, 1, encs_4, 5, 12 },
     { "VERDAN MART", 10, 8, rows_verdan_mart, warps_5, 1, npcs_5, 1, NULL, 0, NULL, 0, 0 },
+    { "ROUTE 2", 20, 26, rows_route_2, warps_6, 2, npcs_6, 3, signs_6, 2, encs_6, 9, 12 },
 };

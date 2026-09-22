@@ -83,7 +83,7 @@ TOWN = [
     "T" * 28,                                               # 23
 ]
 ROUTE1 = [
-    "T" * 20,                                                    # 0
+    "T" * 10 + ".." + "T" * 8,                                   # 0  north gap -> ROUTE 2
     "T" + "g" * 9 + "RRR" + "g" * 6 + "T",                       # 1  landslide
     "T" + "g" * 9 + "RRR" + "g" * 6 + "T",                       # 2
     "T" + "g" * 3 + ",," + "g" * 4 + ",," + "g" * 7 + "T",       # 3
@@ -119,6 +119,35 @@ ROUTE1 = [
     "T" * 10 + ".." + "T" * 8,                                   # 33 south gap -> town
 ]
 
+ROUTE2 = [
+    "T" * 20,                                                    # 0
+    "T" + "g" * 9 + "PP" + "g" * 6 + "S" + "T",                  # 1  keeper's post sign
+    "T" + "g" * 9 + "PP" + "g" * 7 + "T",                        # 2  keeper iris at x13
+    "T" + "g" * 4 + ",," + "g" * 3 + "PP" + "g" * 7 + "T",       # 3
+    "T" + "g" * 4 + ",," + "g" * 3 + "PP" + "g" * 7 + "T",       # 4
+    "T" + "g" * 9 + "PP" + "g" * 7 + "T",                        # 5
+    "T" + "g" * 2 + '"' * 6 + "g" + "PP" + "g" * 7 + "T",        # 6  scout denim at x13
+    "T" + "g" * 2 + '"' * 6 + "g" + "PP" + "g" * 7 + "T",        # 7
+    "T" + "g" * 2 + '"' * 6 + "g" + "PP" + "g" * 7 + "T",        # 8
+    "T" + "g" * 2 + '"' * 6 + "g" + "PP" + "g" * 7 + "T",        # 9
+    "T" + "g" * 9 + "PP" + "g" * 7 + "T",                        # 10
+    "T" + "g" * 9 + "PP" + "g" * 3 + "sWWs" + "T",               # 11 pond
+    "T" + "g" * 9 + "PP" + "g" * 3 + "sWWs" + "T",               # 12 pond
+    "T" + "g" * 9 + "PP" + "g" * 4 + "ss" + "g" + "T",           # 13
+    "T" + "g" * 5 + '"' * 3 + "g" + "PP" + "g" * 7 + "T",        # 14 hiker bram at x8
+    "T" + "g" * 5 + '"' * 3 + "g" + "PP" + "g" * 7 + "T",        # 15
+    "T" + "g" * 5 + '"' * 3 + "g" + "PP" + "g" * 7 + "T",        # 16
+    "T" + "g" * 9 + "PP" + "L" * 6 + "g" + "T",                  # 17 ledge row
+    "T" + "g" * 9 + "PP" + "g" * 7 + "T",                        # 18
+    "T" + "g" * 2 + '"' * 6 + "g" + "PP" + "g" * 7 + "T",        # 19
+    "T" + "g" * 2 + '"' * 6 + "g" + "PP" + "g" * 7 + "T",        # 20
+    "T" + "g" * 2 + '"' * 6 + "g" + "PP" + "g" * 7 + "T",        # 21
+    "T" + "g" * 2 + '"' * 6 + "g" + "PP" + "g" * 7 + "T",        # 22
+    "T" + "g" * 9 + "PP" + "g" * 7 + "T",                        # 23
+    "T" + "g" * 9 + "PP" + "g" * 6 + "S" + "T",                  # 24 route sign
+    "T" * 10 + ".." + "T" * 8,                                   # 25 south gap -> ROUTE 1
+]
+
 MAPS_ASCII = {
     0: ("PLAYER'S HOUSE", HOUSE),
     1: ("MAPLE'S LAB", LAB),
@@ -126,6 +155,7 @@ MAPS_ASCII = {
     3: ("VERDAN TOWN", TOWN),
     4: ("ROUTE 1", ROUTE1),
     5: ("VERDAN MART", MART),
+    6: ("ROUTE 2", ROUTE2),
 }
 
 # ---------------------------------------------------------------- data
@@ -178,6 +208,42 @@ dlg_maya_post = [
     "with friends anyway!",
     None,
 ]
+dlg_denim_pre = [
+    "SCOUT DENIM: This is my",
+    "patrol route! Nobody",
+    "passes without a battle!",
+    None,
+]
+dlg_denim_post = [
+    "The wilds up here are",
+    "tough. Train hard, kid!",
+    None,
+]
+dlg_bram_pre = [
+    "HIKER BRAM: These rocks?",
+    "I carried them here",
+    "myself! Show me strength!",
+    None,
+]
+dlg_bram_post = [
+    "Strong! The pass treats",
+    "the strong kindly.",
+    None,
+]
+dlg_iris_pre = [
+    "FOREST KEEPER IRIS:",
+    "The creatures of this",
+    "pass answer to me.",
+    "Prove your bond - battle!",
+    None,
+]
+dlg_iris_post = [
+    "The pass is yours to",
+    "walk. Beyond lies",
+    "Emberwood... when the",
+    "road opens. Keep growing!",
+    None,
+]
 
 TRAINER_LIAM = {
     "name": "CAMPER LIAM", "sprite": 4,
@@ -191,7 +257,27 @@ TRAINER_MAYA = {
     "levels": [5, 5], "reward": 240,
     "post": "dlg_maya_post", "flag": 4,  # FLAG_T2
 }
-TRAINERS = [("liam", TRAINER_LIAM), ("maya", TRAINER_MAYA)]
+TRAINER_DENIM = {
+    "name": "SCOUT DENIM", "sprite": 4,
+    "party": [5, 7],  # ZEPHIRD, SPARKIT
+    "levels": [9, 9], "reward": 360,
+    "post": "dlg_denim_post", "flag": 8,  # FLAG_T3
+}
+TRAINER_BRAM = {
+    "name": "HIKER BRAM", "sprite": 1,
+    "party": [4, 6],  # PEBBLY, MOSSLING
+    "levels": [10, 9], "reward": 400,
+    "post": "dlg_bram_post", "flag": 16,  # FLAG_T4
+}
+TRAINER_IRIS = {
+    "name": "KEEPER IRIS", "sprite": 1,
+    "party": [2, 6, 9],  # SPROUTLE, MOSSLING, VERDANTIS
+    "levels": [12, 12, 15], "reward": 900,
+    "post": "dlg_iris_post", "flag": 32,  # FLAG_KEEPER
+}
+TRAINERS = [("liam", TRAINER_LIAM), ("maya", TRAINER_MAYA),
+            ("denim", TRAINER_DENIM), ("bram", TRAINER_BRAM),
+            ("iris", TRAINER_IRIS)]
 
 # map id -> warps (x, y, dest_map, dest_x, dest_y)
 WARPS = {
@@ -205,7 +291,9 @@ WARPS = {
     0: [(5, 8, 3, 5, 7)],    # house mat -> town below door
     1: [(6, 9, 3, 13, 15)],  # lab mat -> town below lab door
     2: [(3, 7, 3, 19, 6)],   # heal mat -> town below heal door
-    4: [(10, 33, 3, 13, 1), (11, 33, 3, 14, 1)],
+    4: [(10, 33, 3, 13, 1), (11, 33, 3, 14, 1),
+        (10, 0, 6, 10, 24), (11, 0, 6, 11, 24)],
+    6: [(10, 25, 4, 10, 1), (11, 25, 4, 11, 1)],
     5: [(3, 7, 3, 23, 9)],   # mart mat -> town below mart door
 }
 NPCS = {
@@ -228,15 +316,26 @@ NPCS = {
          "trainer": "liam"},
         {"x": 12, "y": 22, "dir": 2, "sprite": 4, "role": 4, "lines": dlg_maya_pre,
          "trainer": "maya"},
-        {"x": 10, "y": 3, "dir": 0, "sprite": 1, "role": 5, "lines": dlg_hiker},
+        {"x": 10, "y": 3, "dir": 0, "sprite": 1, "role": 5, "lines": dlg_hiker,
+         "need_flags": 6},  # gone when FLAG_T1|FLAG_T2 set
     ],
     5: [  # mart
         {"x": 2, "y": 2, "dir": 0, "sprite": 1, "role": 6, "lines": None},
+    ],
+    6: [  # route 2
+        {"x": 13, "y": 6, "dir": 2, "sprite": 4, "role": 4, "lines": dlg_denim_pre,
+         "trainer": "denim"},
+        {"x": 8, "y": 14, "dir": 3, "sprite": 1, "role": 4, "lines": dlg_bram_pre,
+         "trainer": "bram"},
+        {"x": 13, "y": 2, "dir": 2, "sprite": 1, "role": 4, "lines": dlg_iris_pre,
+         "trainer": "iris"},
     ],
 }
 SIGNS = {
     3: [(15, 16, "VERDAN TOWN\nWhere journeys sprout.")],
     4: [(16, 27, "ROUTE 1\nVERDAN TOWN - MT. CINDER")],
+    6: [(18, 24, "ROUTE 2\nEMBERWOOD PASS"),
+        (18, 1, "KEEPER'S POST\nGUARDIAN OF THE PASS")],
 }
 ENCS = {
     4: [
@@ -245,6 +344,17 @@ ENCS = {
         (6, 2, 3, 15),   # MOSSLING
         (7, 3, 4, 10),   # SPARKIT
         (4, 3, 5, 5),    # PEBBLY
+    ],
+    6: [
+        (3, 8, 10, 20),   # FLUFFIT
+        (5, 9, 11, 15),   # ZEPHIRD
+        (6, 8, 10, 15),   # MOSSLING
+        (7, 9, 11, 15),   # SPARKIT
+        (4, 10, 12, 15),  # PEBBLY
+        (10, 10, 12, 10), # LOPPIN (evolved fluffit)
+        (8, 12, 12, 4),   # TORRENTOL (rare evolved)
+        (9, 12, 12, 3),   # VERDANTIS (rare evolved)
+        (11, 12, 12, 3),  # PYROGON (rare evolved)
     ],
 }
 
@@ -268,7 +378,9 @@ def validate():
             drows = MAPS_ASCII[dm][1]
             if not (0 <= dy < len(drows) and 0 <= dx < len(drows[dy])):
                 errors.append(f"{name}: warp dest out of range map{dm} {dx},{dy}")
-            elif drows[dy][dx] not in WALKABLE:
+            elif drows[dy][dx] not in WALKABLE and not (
+                dm == 4 and dy in (1, 2) and 10 <= dx <= 12
+            ):  # landslide rocks: runtime path once route trainers beaten
                 errors.append(f"{name}: warp dest on solid tile map{dm} {dx},{dy} ('{drows[dy][dx]}')")
         for npc in NPCS.get(mid, []):
             ch = rows[npc["y"]][npc["x"]]
@@ -313,6 +425,9 @@ def emit():
         "dlg_hiker": dlg_hiker, "dlg_villager": dlg_villager,
         "dlg_liam_pre": dlg_liam_pre, "dlg_liam_post": dlg_liam_post,
         "dlg_maya_pre": dlg_maya_pre, "dlg_maya_post": dlg_maya_post,
+        "dlg_denim_pre": dlg_denim_pre, "dlg_denim_post": dlg_denim_post,
+        "dlg_bram_pre": dlg_bram_pre, "dlg_bram_post": dlg_bram_post,
+        "dlg_iris_pre": dlg_iris_pre, "dlg_iris_post": dlg_iris_post,
     }
     for ident, lines in dlg_map.items():
         parts.append(f"static const char *const {ident}[] = {{")
@@ -333,9 +448,10 @@ def emit():
             lines = "NULL" if npc["lines"] is None else \
                 [k for k, v in dlg_map.items() if v is npc["lines"]][0]
             tr = "NULL" if "trainer" not in npc else f"&trainer_{npc['trainer']}"
+            nf = npc.get("need_flags", 0)
             parts.append(
                 f"    {{{npc['x']}, {npc['y']}, {npc['dir']}, {npc['sprite']}, "
-                f"{npc['role']}, {lines}, {tr}}},")
+                f"{npc['role']}, {lines}, {tr}, {nf}}},")
         parts.append("};")
         parts.append("")
     for mid in sorted(SIGNS):
