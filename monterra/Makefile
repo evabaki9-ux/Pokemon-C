@@ -34,7 +34,7 @@ bin/test_core: tests/test_core.c src/core.c src/save.c src/state.c src/data/tabl
 wasm: web/monterra.js
 
 web/monterra.js: $(SRC) | assets
-	$(EMCC) $(CFLAGS) -o web/monterra.js $(SRC) \
+	$(EMCC) -std=gnu11 -O2 -Wall -Wextra -Isrc -o web/monterra.js $(SRC) \
 	    -sUSE_SDL=2 -sALLOW_MEMORY_GROWTH=1 \
 	    --preload-file assets -O2 --closure 0
 

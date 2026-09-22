@@ -209,9 +209,9 @@ bool save_write(void)
         return false;
     EM_ASM_({
         var bytes = new Uint8Array(HEAPU8.buffer, $0, $1);
-        var s = '';
+        var s = "";
         for (var i = 0; i < $1; i++) s += String.fromCharCode(bytes[i]);
-        try { localStorage.setItem('monterra_save', btoa(s)); } catch (e) {}
+        try { localStorage.setItem("monterra_save", btoa(s)); } catch (e) {}
     }, s_buf, (int)n);
     return true;
 }
@@ -220,7 +220,7 @@ bool save_read(void)
 {
     int len = EM_ASM_INT({
         var s = null;
-        try { s = localStorage.getItem('monterra_save'); } catch (e) {}
+        try { s = localStorage.getItem("monterra_save"); } catch (e) {}
         if (!s) return 0;
         try {
             var bin = atob(s);
@@ -239,7 +239,7 @@ bool save_read(void)
 bool save_exists(void)
 {
     int has = EM_ASM_INT({
-        try { return localStorage.getItem('monterra_save') ? 1 : 0; }
+        try { return localStorage.getItem("monterra_save") ? 1 : 0; }
         catch (e) { return 0; }
     });
     return has != 0;
