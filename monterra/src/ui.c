@@ -248,15 +248,22 @@ void party_update(void)
 {
     if (!pm.active)
         return;
+    /* bounded cursor movement: never loops when nothing is pickable
+     * (fixes the freeze when opening TEAM in battle with no healthy
+     * switchable partners) */
+    int exclude = (pm.mode == PM_SWITCH) ? g.active_slot : -1;
+    bool need_hp = (pm.mode == PM_SWITCH || pm.mode == PM_TARGET);
     if (g_in.pressed[BTN_UP]) {
-        do {
-            pm.cursor = (pm.cursor + g.party_n - 1) % (g.party_n ? g.party_n : 1);
-        } while (!pickable(pm.cursor));
+        int c = party_pick_cursor(g.party, g.party_n, exclude, need_hp,
+                                  pm.cursor, -1);
+        if (c >= 0)
+            pm.cursor = c;
     }
     if (g_in.pressed[BTN_DOWN]) {
-        do {
-            pm.cursor = (pm.cursor + 1) % (g.party_n ? g.party_n : 1);
-        } while (!pickable(pm.cursor));
+        int c = party_pick_cursor(g.party, g.party_n, exclude, need_hp,
+                                  pm.cursor, 1);
+        if (c >= 0)
+            pm.cursor = c;
     }
     if (g_in.pressed[BTN_A] && pickable(pm.cursor)) {
         pm.result = pm.cursor;
@@ -298,6 +305,11 @@ void party_draw(SDL_Renderer *r)
         draw_hpbar(r, 140, y + 13, 90, c->hp, c->stats[ST_HP]);
     }
     draw_text(r, 10, SCREEN_H - 12, "Z:OK  X:BACK", dark, 1);
+    if (pm.mode == PM_SWITCH &&
+        !party_any_pickable(g.party, g.party_n, g.active_slot, true)) {
+        SDL_Color warn = { 176, 48, 48, 255 };
+        draw_text(r, 82, SCREEN_H - 12, "NO HEALTHY SWAP!", warn, 1);
+    }
 }
 
 /* ---------------------------------------------------------------- bag */

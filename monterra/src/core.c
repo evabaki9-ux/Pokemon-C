@@ -233,6 +233,40 @@ static int expected_damage(const Creature *att, const Creature *def, uint8_t mov
     return dmg;
 }
 
+static bool slot_pickable(const Creature *party, int n, int exclude_slot,
+                          bool require_hp, int slot)
+{
+    if (slot < 0 || slot >= n)
+        return false;
+    if (slot == exclude_slot)
+        return false;
+    if (require_hp && party[slot].hp == 0)
+        return false;
+    return true;
+}
+
+int party_pick_cursor(const Creature *party, int n, int exclude_slot,
+                      bool require_hp, int from, int dir)
+{
+    if (n <= 0)
+        return -1;
+    for (int i = 1; i <= n; i++) {
+        int slot = (((from + dir * i) % n) + n) % n;
+        if (slot_pickable(party, n, exclude_slot, require_hp, slot))
+            return slot;
+    }
+    return -1;
+}
+
+bool party_any_pickable(const Creature *party, int n, int exclude_slot,
+                        bool require_hp)
+{
+    for (int i = 0; i < n; i++)
+        if (slot_pickable(party, n, exclude_slot, require_hp, i))
+            return true;
+    return false;
+}
+
 int pick_enemy_move(const Creature *enemy, const Creature *player)
 {
     int usable[4], n = 0;

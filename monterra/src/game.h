@@ -238,6 +238,11 @@ int catch_shakes(const Creature *wild, int ball_x10);
 bool learn_move(Creature *c, uint8_t move_id, int *replaced);
 int pick_enemy_move(const Creature *enemy, const Creature *player);
 const char *type_name(uint8_t t);
+/* party cursor helpers: bounded, never loop when nothing is pickable */
+int party_pick_cursor(const Creature *party, int n, int exclude_slot,
+                      bool require_hp, int from, int dir);
+bool party_any_pickable(const Creature *party, int n, int exclude_slot,
+                        bool require_hp);
 
 /* ---- tables.c ---- */
 extern const Move MOVES[NUM_MOVES];

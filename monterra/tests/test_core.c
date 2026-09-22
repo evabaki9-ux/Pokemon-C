@@ -114,6 +114,29 @@ int main(void)
           "trainer defeat flags wired");
     CHECK(MAPS[MAP_HOUSE].npcs != NULL, "house has mom");
 
+    /* party cursor: freeze regression (battle TEAM with nothing pickable) */
+    {
+        Creature p1[1];
+        creature_init(&p1[0], SP_EMBERIT, 5, 0);
+        CHECK(party_pick_cursor(p1, 1, 0, true, 0, 1) == -1,
+              "single creature: nothing to switch to");
+        CHECK(!party_any_pickable(p1, 1, 0, true),
+              "single creature: none pickable");
+        Creature p2[2];
+        creature_init(&p2[0], SP_EMBERIT, 5, 0);
+        creature_init(&p2[1], SP_FLUFFIT, 4, 0);
+        p2[1].hp = 0;
+        CHECK(party_pick_cursor(p2, 2, 0, true, 0, 1) == -1,
+              "fainted partner: still nothing to switch to");
+        CHECK(party_pick_cursor(p2, 2, 0, false, 0, 1) == 1,
+              "view mode skips nothing");
+        p2[1].hp = p2[1].stats[ST_HP];
+        CHECK(party_pick_cursor(p2, 2, 0, true, 0, 1) == 1,
+              "healthy partner found");
+        CHECK(party_pick_cursor(p2, 2, 0, true, 1, 1) == 1,
+              "cursor already on pickable stays in range");
+    }
+
     /* save round-trip */
     memset(&g, 0, sizeof(g));
     g.map = MAP_ROUTE1;
