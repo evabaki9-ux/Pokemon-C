@@ -13,6 +13,7 @@
 #define SCREEN_H 160
 #define TILE 16
 #define MAX_PARTY 6
+#define STORAGE_MAX 12
 #define MAX_BAG 8
 #define NUM_MOVES 29
 #define NUM_ITEMS 4
@@ -215,6 +216,8 @@ typedef struct {
     uint32_t tick;
 
     Creature party[MAX_PARTY];
+    Creature storage[STORAGE_MAX];
+    uint8_t storage_n;
     uint8_t party_n;
     uint8_t active_slot; /* battle: which party member is out */
     uint8_t bag[MAX_BAG];  /* item ids */
@@ -253,6 +256,10 @@ int catch_shakes(const Creature *wild, int ball_x10);
 bool learn_move(Creature *c, uint8_t move_id, int *replaced);
 int pick_enemy_move(const Creature *enemy, const Creature *player);
 const char *type_name(uint8_t t);
+/* PC storage */
+int storage_deposit(int party_slot);  /* 0 ok, -1 last partner, -2 box full */
+int storage_withdraw(int box_idx);    /* 0 ok, -1 bad idx, -2 party full */
+
 /* party cursor helpers: bounded, never loop when nothing is pickable */
 int party_pick_cursor(const Creature *party, int n, int exclude_slot,
                       bool require_hp, int from, int dir);

@@ -268,6 +268,34 @@ bool party_any_pickable(const Creature *party, int n, int exclude_slot,
     return false;
 }
 
+int storage_deposit(int party_slot)
+{
+    if (party_slot < 0 || party_slot >= g.party_n || g.party_n <= 1)
+        return -1; /* never store your last partner */
+    if (g.storage_n >= STORAGE_MAX)
+        return -2;
+    g.storage[g.storage_n++] = g.party[party_slot];
+    for (int i = party_slot; i < g.party_n - 1; i++)
+        g.party[i] = g.party[i + 1];
+    g.party_n--;
+    if (g.active_slot >= g.party_n)
+        g.active_slot = (uint8_t)(g.party_n ? g.party_n - 1 : 0);
+    return 0;
+}
+
+int storage_withdraw(int box_idx)
+{
+    if (box_idx < 0 || box_idx >= g.storage_n)
+        return -1;
+    if (g.party_n >= MAX_PARTY)
+        return -2;
+    g.party[g.party_n++] = g.storage[box_idx];
+    for (int i = box_idx; i < g.storage_n - 1; i++)
+        g.storage[i] = g.storage[i + 1];
+    g.storage_n--;
+    return 0;
+}
+
 int pick_enemy_move(const Creature *enemy, const Creature *player)
 {
     int usable[4], n = 0;

@@ -28,7 +28,7 @@ static const char *const rows_maples_lab[] = {
 
 static const char *const rows_care_station[] = {
     "IIIIIIIIII",
-    "I________I",
+    "I_______CI",
     "I________I",
     "INNNNN__pI",
     "I________I",

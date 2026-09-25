@@ -170,6 +170,31 @@ int main(void)
               "cursor already on pickable stays in range");
     }
 
+    /* PC storage */
+    {
+        memset(&g, 0, sizeof(g));
+        g.party_n = 2;
+        creature_init(&g.party[0], SP_EMBERIT, 8, 0);
+        creature_init(&g.party[1], SP_FLUFFIT, 6, 0);
+        CHECK(storage_deposit(0) == 0, "deposit first partner");
+        CHECK(g.party_n == 1 && g.storage_n == 1, "party/box counts move");
+        CHECK(g.party[0].species == SP_FLUFFIT, "party shifts down");
+        CHECK(storage_deposit(0) == -1, "cannot store the last partner");
+        CHECK(storage_withdraw(0) == 0, "withdraw from box");
+        CHECK(g.party_n == 2 && g.storage_n == 0, "counts restored");
+        CHECK(g.party[1].species == SP_EMBERIT, "withdrawn creature back");
+        /* save round-trip with storage populated (v3) */
+        CHECK(storage_deposit(1) == 0, "redeposit for save test");
+        uint8_t buf[SAVE_MAX];
+        size_t n = save_encode(buf, sizeof(buf));
+        CHECK(n > 0 && n <= SAVE_MAX, "v3 save encodes with storage");
+        g.storage_n = 99; /* trash state */
+        g.party_n = 0;
+        CHECK(save_decode(buf, n), "v3 save decodes");
+        CHECK(g.storage_n == 1 && g.party_n == 1, "storage survives save");
+        CHECK(g.storage[0].species == SP_EMBERIT, "boxed creature intact");
+    }
+
     /* status expansion: new ailments + moves */
     CHECK(MOVES[MV_VENOMSTING].effect == ME_POISON && MOVES[MV_VENOMSTING].power == 30,
           "venom sting poisons");

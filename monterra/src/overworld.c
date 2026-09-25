@@ -236,8 +236,8 @@ static void interact(void)
         return;
     }
     if (t == 'C') {
-        const char *lines[] = { "It's a PC full of adventure", "notes and doodles." };
-        dlg_start(lines, 2);
+        audio_sfx(SFX_CONFIRM);
+        storage_open();
         return;
     }
     if (t == 'B') {
@@ -512,6 +512,10 @@ void ow_update(void)
         shop_update();
         return;
     }
+    if (storage_active()) {
+        storage_update();
+        return;
+    }
     if (menu.open) {
         if (g_in.pressed[BTN_UP]) { menu.cursor = (menu.cursor + MENU_N - 1) % MENU_N; audio_sfx(SFX_BLIP); }
         if (g_in.pressed[BTN_DOWN]) { menu.cursor = (menu.cursor + 1) % MENU_N; audio_sfx(SFX_BLIP); }
@@ -676,4 +680,5 @@ void ow_draw(SDL_Renderer *r)
     party_draw(r);
     bag_draw(r);
     shop_draw(r);
+    storage_draw(r);
 }

@@ -18,6 +18,6 @@ bool save_write(void);
 bool save_read(void);   /* fs -> g via save_decode */
 bool save_exists(void);
 
-#define SAVE_MAX 512
+#define SAVE_MAX 1024
 
 #endif

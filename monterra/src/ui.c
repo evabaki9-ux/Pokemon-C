@@ -455,3 +455,129 @@ void shop_draw(SDL_Renderer *r)
     if (sm.msg[0])
         draw_text(r, 112, SCREEN_H - 22, sm.msg, red, 1);
 }
+
+
+/* ---- PC storage ---- */
+static struct {
+    bool active;
+    int cursor;
+    char msg[48];
+    int msg_frames;
+} stm;
+
+void storage_open(void)
+{
+    stm.active = true;
+    stm.cursor = 0;
+    stm.msg[0] = 0;
+    stm.msg_frames = 0;
+}
+
+bool storage_active(void)
+{
+    return stm.active;
+}
+
+void storage_update(void)
+{
+    if (!stm.active)
+        return;
+    if (stm.msg_frames > 0)
+        stm.msg_frames--;
+    else
+        stm.msg[0] = 0;
+    int total = g.party_n + g.storage_n;
+    if (total > 0) {
+        if (g_in.pressed[BTN_UP]) {
+            stm.cursor = (stm.cursor + total - 1) % total;
+            audio_sfx(SFX_BLIP);
+        }
+        if (g_in.pressed[BTN_DOWN]) {
+            stm.cursor = (stm.cursor + 1) % total;
+            audio_sfx(SFX_BLIP);
+        }
+    }
+    if (g_in.pressed[BTN_B]) {
+        stm.active = false;
+        return;
+    }
+    if (g_in.pressed[BTN_A]) {
+        if (stm.cursor < g.party_n) {
+            char name[24];
+            snprintf(name, sizeof(name), "%s",
+                     SPECIES[g.party[stm.cursor].species].name);
+            int rc = storage_deposit(stm.cursor);
+            if (rc == 0) {
+                audio_sfx(SFX_CONFIRM);
+                snprintf(stm.msg, sizeof(stm.msg), "%s was stored!", name);
+            } else if (rc == -1) {
+                snprintf(stm.msg, sizeof(stm.msg), "Can't store your last partner!");
+            } else {
+                snprintf(stm.msg, sizeof(stm.msg), "The box is full!");
+            }
+        } else {
+            int idx = stm.cursor - g.party_n;
+            char name[24];
+            snprintf(name, sizeof(name), "%s",
+                     SPECIES[g.storage[idx].species].name);
+            int rc = storage_withdraw(idx);
+            if (rc == 0) {
+                audio_sfx(SFX_CONFIRM);
+                snprintf(stm.msg, sizeof(stm.msg), "%s joined the party!", name);
+                stm.cursor = g.party_n - 1;
+            } else {
+                snprintf(stm.msg, sizeof(stm.msg), "Your party is full!");
+            }
+        }
+        stm.msg_frames = 90;
+        int total2 = g.party_n + g.storage_n;
+        if (stm.cursor >= total2)
+            stm.cursor = total2 > 0 ? total2 - 1 : 0;
+    }
+}
+
+void storage_draw(SDL_Renderer *r)
+{
+    if (!stm.active)
+        return;
+    draw_panel(r, 2, 2, SCREEN_W - 4, SCREEN_H - 4);
+    SDL_Color dark = { 56, 56, 64, 255 };
+    SDL_Color red = { 200, 48, 48, 255 };
+    SDL_Color gray = { 120, 120, 132, 255 };
+    SDL_Color head = { 56, 96, 160, 255 };
+    char buf[32];
+
+    draw_text(r, 10, 6, "STORAGE PC", dark, 1);
+    draw_text(r, 10, 18, "PARTY", head, 1);
+    draw_text(r, 124, 18, "BOX", head, 1);
+
+    for (int i = 0; i < g.party_n; i++) {
+        int y = 30 + i * 12;
+        if (i == stm.cursor)
+            draw_text(r, 4, y, ">", red, 1);
+        snprintf(buf, sizeof(buf), "%s", SPECIES[g.party[i].species].name);
+        draw_text(r, 12, y, buf, dark, 1);
+        snprintf(buf, sizeof(buf), "L%u", g.party[i].level);
+        draw_text(r, 96, y, buf, gray, 1);
+    }
+    if (g.party_n == 0)
+        draw_text(r, 12, 30, "(empty)", gray, 1);
+
+    for (int j = 0; j < g.storage_n; j++) {
+        int y = 30 + j * 10;
+        int sel = g.party_n + j;
+        if (sel == stm.cursor)
+            draw_text(r, 118, y, ">", red, 1);
+        snprintf(buf, sizeof(buf), "%s", SPECIES[g.storage[j].species].name);
+        draw_text(r, 126, y, buf, dark, 1);
+        snprintf(buf, sizeof(buf), "L%u", g.storage[j].level);
+        draw_text(r, 210, y, buf, gray, 1);
+    }
+    if (g.storage_n == 0)
+        draw_text(r, 126, 30, "(empty)", gray, 1);
+
+    if (stm.msg[0])
+        draw_text(r, 10, SCREEN_H - 12, stm.msg, dark, 1);
+    else
+        draw_text(r, 10, SCREEN_H - 12, "Z:STORE/TAKE  X:EXIT", dark, 1);
+}

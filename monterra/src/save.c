@@ -4,7 +4,7 @@
 #include "game.h"
 
 #define SAVE_MAGIC "MNTS"
-#define SAVE_VERSION 2
+#define SAVE_VERSION 3
 
 /* ---- little writer/reader ---- */
 typedef struct {
@@ -129,6 +129,9 @@ size_t save_encode(uint8_t *buf, size_t cap)
     w8(&w, g.heal_map);
     w8(&w, g.heal_x);
     w8(&w, g.heal_y);
+    w8(&w, g.storage_n);
+    for (int i = 0; i < g.storage_n; i++)
+        save_creature(&w, &g.storage[i]);
     if (w.err)
         return 0;
     return w.n;
@@ -141,7 +144,8 @@ bool save_decode(const uint8_t *buf, size_t len)
     rbytes(&r, magic, 4);
     if (memcmp(magic, SAVE_MAGIC, 4) != 0)
         return false;
-    if (r8(&r) != SAVE_VERSION)
+    uint8_t ver = r8(&r);
+    if (ver < 2 || ver > SAVE_VERSION)
         return false;
 
     GameState t;
@@ -176,6 +180,14 @@ bool save_decode(const uint8_t *buf, size_t len)
     t.heal_y = r8(&r);
     if (r.err || t.heal_map >= NUM_MAPS)
         return false;
+    if (ver >= 3) {
+        t.storage_n = r8(&r);
+        if (r.err || t.storage_n > STORAGE_MAX)
+            return false;
+        for (int i = 0; i < t.storage_n; i++)
+            if (!load_creature(&r, &t.storage[i]))
+                return false;
+    }
 
     /* position must be on the map */
     const MapDef *m = &MAPS[t.map];

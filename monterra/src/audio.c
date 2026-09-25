@@ -6,6 +6,9 @@
 #include <string.h>
 #include "audio.h"
 #include "data/music.h"
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 #define RATE 44100
 
@@ -212,8 +215,15 @@ void audio_init(void)
     A.dev = SDL_OpenAudioDevice(NULL, 0, &want, &have,
                                 SDL_AUDIO_ALLOW_FREQUENCY_CHANGE |
                                 SDL_AUDIO_ALLOW_SAMPLES_CHANGE);
-    if (A.dev == 0)
+    if (A.dev == 0) {
+#ifdef __EMSCRIPTEN__
+        EM_ASM({ console.warn("MONTERRA: audio device unavailable - running silent"); });
+#endif
         return; /* run silently */
+    }
+#ifdef __EMSCRIPTEN__
+    EM_ASM({ console.info("MONTERRA: audio ready - sound starts on first key press"); });
+#endif
     SDL_PauseAudioDevice(A.dev, 0);
 }
 

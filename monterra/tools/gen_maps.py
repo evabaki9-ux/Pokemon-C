@@ -38,7 +38,7 @@ LAB = [
 ]
 HEAL = [
     "IIIIIIIIII",
-    "I________I",
+    "I_______CI",
     "I________I",
     "INNNNN__pI",
     "I________I",

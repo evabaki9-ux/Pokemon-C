@@ -58,4 +58,10 @@ bool shop_active(void);
 void shop_update(void);
 void shop_draw(SDL_Renderer *r);
 
+/* PC storage screen */
+void storage_open(void);
+bool storage_active(void);
+void storage_update(void);
+void storage_draw(SDL_Renderer *r);
+
 #endif
