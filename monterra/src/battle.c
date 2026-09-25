@@ -216,6 +216,30 @@ static void resolve_move(uint8_t actor, uint8_t slot)
         q_msg("It can't move!", NULL);
         return;
     }
+    if (att->ailment == AIL_FREEZE) {
+        if (rand() % 5 == 0) {
+            att->ailment = AIL_NONE;
+            q_msgf("%s thawed out!", an);
+        } else {
+            q_msgf("%s is frozen solid!", an);
+            return;
+        }
+    }
+    if (att->conf_turns > 0) {
+        att->conf_turns--;
+        if (att->conf_turns == 0) {
+            q_msgf("%s snapped out of confusion!", an);
+        } else if (rand() % 3 == 0) {
+            q_msgf("%s is confused!", an);
+            q_msg("It hurt itself in confusion!", NULL);
+            int8_t z[6] = { 0 };
+            DamageResult sr = move_damage(att, att, z, z, MV_TACKLE);
+            int nh = att->hp - (sr.damage > 0 ? sr.damage : 1);
+            att->hp = (uint16_t)(nh < 0 ? 0 : nh);
+            qf(BS_WAIT_HP, 0, 0, NULL, NULL);
+            return;
+        }
+    }
     /* out of usable moves: Struggle (with recoil) */
     bool struggle = (slot >= 4 || att->moves[slot] == 0xFF || att->pp[slot] == 0);
     if (!struggle)
@@ -246,6 +270,13 @@ static void resolve_move(uint8_t actor, uint8_t slot)
                 def->ailment = AIL_SLEEP;
                 def->sleep_turns = (uint8_t)(1 + rand() % 3);
                 q_msgf("%s fell asleep!", dn);
+            }
+        } else if (mv->effect == ME_CONFUSE) {
+            if (def->conf_turns > 0) {
+                q_msg("But it failed!", NULL);
+            } else {
+                def->conf_turns = (uint8_t)(2 + rand() % 4);
+                q_msgf("%s became confused!", dn);
             }
         }
         return;
@@ -289,12 +320,23 @@ static void resolve_move(uint8_t actor, uint8_t slot)
         qf(BS_WAIT_HP, 0, 0, NULL, NULL);
         q_msgf("%s drained energy!", an);
     }
+    /* fire melts ice */
+    if (def->hp > 0 && mv->type == TY_FIRE && def->ailment == AIL_FREEZE) {
+        def->ailment = AIL_NONE;
+        q_msgf("%s thawed out!", dn);
+    }
     /* secondary effects */
     if (def->hp > 0 && mv->effect_chance > 0 && rand() % 100 < mv->effect_chance) {
-        if ((mv->effect == ME_BURN || mv->effect == ME_PARA) && def->ailment == AIL_NONE) {
-            def->ailment = (mv->effect == ME_BURN) ? AIL_BURN : AIL_PARA;
+        if ((mv->effect == ME_BURN || mv->effect == ME_PARA ||
+             mv->effect == ME_POISON || mv->effect == ME_FREEZE) &&
+            def->ailment == AIL_NONE) {
+            def->ailment = (mv->effect == ME_BURN) ? AIL_BURN :
+                           (mv->effect == ME_PARA) ? AIL_PARA :
+                           (mv->effect == ME_POISON) ? AIL_POISON : AIL_FREEZE;
             q_msgf("%s was %s!", dn,
-                   mv->effect == ME_BURN ? "burned" : "paralyzed");
+                   mv->effect == ME_BURN ? "burned" :
+                   mv->effect == ME_PARA ? "paralyzed" :
+                   mv->effect == ME_POISON ? "poisoned" : "frozen solid!");
         } else if (mv->stat_id >= 0 && mv->target == MT_FOE) {
             int8_t cur = dst[mv->stat_id];
             int8_t nx = (int8_t)(cur + mv->stat_stages);
@@ -457,6 +499,20 @@ static void resolve_end_turn(void)
         qf(BS_WAIT_HP, 0, 0, NULL, NULL);
         q_msgf("%s is hurt by its burn!", ename());
     }
+    if (c->hp > 0 && c->ailment == AIL_POISON) {
+        int dmg = c->stats[ST_HP] / 8;
+        if (dmg < 1) dmg = 1;
+        c->hp = (uint16_t)(c->hp > dmg ? c->hp - dmg : 0);
+        qf(BS_WAIT_HP, 0, 0, NULL, NULL);
+        q_msgf("%s is hurt by poison!", pname());
+    }
+    if (e->hp > 0 && e->ailment == AIL_POISON) {
+        int dmg = e->stats[ST_HP] / 8;
+        if (dmg < 1) dmg = 1;
+        e->hp = (uint16_t)(e->hp > dmg ? e->hp - dmg : 0);
+        qf(BS_WAIT_HP, 0, 0, NULL, NULL);
+        q_msgf("%s is hurt by poison!", ename());
+    }
 }
 
 /* ---- catch ---- */
@@ -525,6 +581,7 @@ static void send_out(int slot)
 
 static void do_switch(int slot)
 {
+    pc()->conf_turns = 0; /* volatile effects clear on switch */
     q_msgf("Come back, %s!", pname());
     qf(BS_SWITCH_IN, (uint8_t)slot, 0, NULL, NULL);
     q_msgf("Go! %s!", SPECIES[g.party[slot].species].name);
@@ -841,6 +898,9 @@ void battle_draw(SDL_Renderer *r)
     if (pc()->ailment == AIL_BURN) draw_text(r, 196, 94, "BRN", (SDL_Color){ 224, 96, 32, 255 }, 1);
     else if (pc()->ailment == AIL_PARA) draw_text(r, 196, 94, "PAR", (SDL_Color){ 200, 176, 32, 255 }, 1);
     else if (pc()->ailment == AIL_SLEEP) draw_text(r, 196, 94, "SLP", (SDL_Color){ 120, 120, 168, 255 }, 1);
+    else if (pc()->ailment == AIL_POISON) draw_text(r, 196, 94, "PSN", (SDL_Color){ 168, 72, 208, 255 }, 1);
+    else if (pc()->ailment == AIL_FREEZE) draw_text(r, 196, 94, "FRZ", (SDL_Color){ 96, 184, 224, 255 }, 1);
+    else if (pc()->conf_turns > 0) draw_text(r, 196, 94, "CNF", (SDL_Color){ 208, 144, 48, 255 }, 1);
     draw_xpbar(r, 128, 103, 104, pc());
 
     /* trainer indicator */

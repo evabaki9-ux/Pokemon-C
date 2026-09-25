@@ -14,7 +14,7 @@
 #define TILE 16
 #define MAX_PARTY 6
 #define MAX_BAG 8
-#define NUM_MOVES 25
+#define NUM_MOVES 29
 #define NUM_ITEMS 4
 #define NUM_MAPS 7
 #define TEXTBOX_H 44
@@ -30,18 +30,20 @@ enum { TY_NORMAL, TY_FIRE, TY_WATER, TY_GRASS, TY_ELECTRIC, TY_ROCK, TY_FLYING, 
 enum { ST_HP, ST_ATK, ST_DEF, ST_SAT, ST_SDF, ST_SPE };
 
 /* ---- ailments ---- */
-enum { AIL_NONE, AIL_BURN, AIL_PARA, AIL_SLEEP };
+enum { AIL_NONE, AIL_BURN, AIL_PARA, AIL_SLEEP, AIL_POISON, AIL_FREEZE, AIL_CONFUSION };
 
 /* ---- moves ---- */
 enum { MC_PHYS, MC_SPEC, MC_STATUS };
-enum { ME_NONE, ME_BURN, ME_PARA, ME_SLEEP, ME_DRAIN, ME_HIGH_CRIT, ME_RECOIL };
+enum { ME_NONE, ME_BURN, ME_PARA, ME_SLEEP, ME_DRAIN, ME_HIGH_CRIT, ME_RECOIL,
+       ME_POISON, ME_FREEZE, ME_CONFUSE };
 /* move ids (index into MOVES[]) */
 enum {
     MV_TACKLE, MV_SCRATCH, MV_GROWL, MV_TAILWHIP, MV_HOWL, MV_HARDEN,
     MV_QUICKPECK, MV_WINGSLAP, MV_GUST, MV_EMBER, MV_FLAMEBURST,
     MV_WATERGUN, MV_BUBBLEBEAM, MV_VINEWHIP, MV_LEAFBLADE, MV_ABSORB,
     MV_SPARK, MV_THUNDERJOLT, MV_ROCKTOSS, MV_BOULDERSLAM, MV_BUGBITE,
-    MV_STRINGSHOT, MV_SLEEPPOWDER, MV_HEADBUTT, MV_STRUGGLE
+    MV_STRINGSHOT, MV_SLEEPPOWDER, MV_HEADBUTT, MV_STRUGGLE,
+    MV_VENOMSTING, MV_VENOMJAB, MV_DAZZLE, MV_COLDSNAP
 };
 enum { MT_FOE, MT_SELF };
 
@@ -106,6 +108,7 @@ typedef struct {
     uint8_t pp[4];
     uint8_t ailment;
     uint8_t sleep_turns;
+    uint8_t conf_turns; /* volatile, battle-only; not saved */
 } Creature;
 
 /* ---- tiles (order mirrors tools/gen_tiles.py TILES[]) ---- */

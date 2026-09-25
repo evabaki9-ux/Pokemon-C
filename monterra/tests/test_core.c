@@ -170,6 +170,23 @@ int main(void)
               "cursor already on pickable stays in range");
     }
 
+    /* status expansion: new ailments + moves */
+    CHECK(MOVES[MV_VENOMSTING].effect == ME_POISON && MOVES[MV_VENOMSTING].power == 30,
+          "venom sting poisons");
+    CHECK(MOVES[MV_COLDSNAP].effect == ME_FREEZE && MOVES[MV_COLDSNAP].type == TY_WATER,
+          "cold snap freezes");
+    CHECK(MOVES[MV_DAZZLE].effect == ME_CONFUSE && MOVES[MV_DAZZLE].category == MC_STATUS,
+          "dazzle confuses");
+    {
+        Creature m;
+        creature_init(&m, SP_MOSSLING, 19, 0);
+        int has_venom = 0;
+        for (int i = 0; i < 4; i++)
+            if (m.moves[i] == MV_VENOMJAB)
+                has_venom = 1;
+        CHECK(has_venom, "mossling learns venom jab by L19");
+    }
+
     /* struggle move data */
     CHECK(MOVES[MV_STRUGGLE].power == 50 && MOVES[MV_STRUGGLE].effect == ME_RECOIL,
           "struggle is a 50-power recoil move");

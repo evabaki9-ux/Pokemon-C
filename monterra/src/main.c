@@ -56,6 +56,7 @@ void heal_party(void)
         c->hp = c->stats[ST_HP];
         c->ailment = AIL_NONE;
         c->sleep_turns = 0;
+        c->conf_turns = 0;
         for (int m = 0; m < 4; m++)
             if (c->moves[m] != 0xFF)
                 c->pp[m] = MOVES[c->moves[m]].pp;

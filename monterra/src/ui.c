@@ -303,6 +303,9 @@ void party_draw(SDL_Renderer *r)
         if (c->ailment == AIL_BURN) draw_text(r, 86, y + 12, "BRN", (SDL_Color){ 224, 96, 32, 255 }, 1);
         else if (c->ailment == AIL_PARA) draw_text(r, 86, y + 12, "PAR", (SDL_Color){ 200, 176, 32, 255 }, 1);
         else if (c->ailment == AIL_SLEEP) draw_text(r, 86, y + 12, "SLP", (SDL_Color){ 120, 120, 168, 255 }, 1);
+        else if (c->ailment == AIL_POISON) draw_text(r, 86, y + 12, "PSN", (SDL_Color){ 168, 72, 208, 255 }, 1);
+        else if (c->ailment == AIL_FREEZE) draw_text(r, 86, y + 12, "FRZ", (SDL_Color){ 96, 184, 224, 255 }, 1);
+        else if (c->conf_turns > 0) draw_text(r, 86, y + 12, "CNF", (SDL_Color){ 208, 144, 48, 255 }, 1);
         draw_hpbar(r, 140, y + 13, 90, c->hp, c->stats[ST_HP]);
     }
     if (pm.mode == PM_SWITCH &&
