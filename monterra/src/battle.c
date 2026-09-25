@@ -216,12 +216,11 @@ static void resolve_move(uint8_t actor, uint8_t slot)
         q_msg("It can't move!", NULL);
         return;
     }
-    if (slot >= 4 || att->moves[slot] == 0xFF || att->pp[slot] == 0) {
-        q_msgf("%s has no moves left!", an);
-        return;
-    }
-    att->pp[slot]--;
-    const Move *mv = &MOVES[att->moves[slot]];
+    /* out of usable moves: Struggle (with recoil) */
+    bool struggle = (slot >= 4 || att->moves[slot] == 0xFF || att->pp[slot] == 0);
+    if (!struggle)
+        att->pp[slot]--;
+    const Move *mv = struggle ? &MOVES[MV_STRUGGLE] : &MOVES[att->moves[slot]];
     q_msgf("%s used %s!", an, mv->name);
 
     if (mv->category == MC_STATUS) {
@@ -252,7 +251,8 @@ static void resolve_move(uint8_t actor, uint8_t slot)
         return;
     }
 
-    DamageResult r = move_damage(att, def, ast, dst, att->moves[slot]);
+    DamageResult r = move_damage(att, def, ast, dst,
+                                 struggle ? MV_STRUGGLE : att->moves[slot]);
     if (!r.missed && r.damage > 0)
         audio_sfx(SFX_HIT);
     if (r.missed) {
@@ -273,6 +273,14 @@ static void resolve_move(uint8_t actor, uint8_t slot)
         q_msg("It's super effective!", NULL);
     else if (r.effectiveness == -1)
         q_msg("It's not very effective...", NULL);
+    if (mv->effect == ME_RECOIL && r.damage > 0) {
+        int rd = r.damage / 4;
+        if (rd < 1) rd = 1;
+        int nh = att->hp - rd;
+        att->hp = (uint16_t)(nh < 0 ? 0 : nh);
+        qf(BS_WAIT_HP, 0, 0, NULL, NULL);
+        q_msgf("%s is hit by recoil!", an);
+    }
     if (mv->effect == ME_DRAIN && r.damage > 0) {
         int heal = r.damage / 2;
         int nh = att->hp + heal;
@@ -305,18 +313,19 @@ static void resolve_move(uint8_t actor, uint8_t slot)
 static void enemy_turn(void)
 {
     int emv = pick_enemy_move(&B.enemy, pc());
-    if (emv >= 0)
-        qf(BS_ACT_MOVE, 1, (uint8_t)emv, NULL, NULL);
+    /* emv < 0: enemy is out of PP -> resolve_move falls back to Struggle */
+    qf(BS_ACT_MOVE, 1, (uint8_t)(emv >= 0 ? emv : 0xFF), NULL, NULL);
     qf(BS_CHECK, 0, 0, NULL, NULL);
     qf(BS_END_TURN, 0, 0, NULL, NULL);
     qf(BS_MENU, 0, 0, NULL, NULL);
 }
 
 /* ---- turn construction ---- */
-static void build_turn(int pslot)
+static void build_turn(int pslot) /* pslot < 0: forced Struggle */
 {
     int emv = pick_enemy_move(&B.enemy, pc());
-    const Move *pm = &MOVES[pc()->moves[pslot]];
+    const Move *pm = (pslot < 0) ? &MOVES[MV_STRUGGLE]
+                                 : &MOVES[pc()->moves[pslot]];
     bool player_first = true;
     if (emv >= 0) {
         const Move *em = &MOVES[B.enemy.moves[emv]];
@@ -712,7 +721,13 @@ void battle_update(void)
             B.phase = BP_MENU;
         } else if (g_in.pressed[BTN_A]) {
             int slot = slots[B.fight_cur];
-            if (pc()->pp[slot] == 0) {
+            bool any_pp = false;
+            for (int i = 0; i < 4; i++)
+                if (pc()->moves[i] != 0xFF && pc()->pp[i] > 0)
+                    any_pp = true;
+            if (!any_pp) {
+                build_turn(-1); /* forced Struggle */
+            } else if (pc()->pp[slot] == 0) {
                 q_msg("No PP left for this move!", NULL);
                 qf(BS_MENU, 0, 0, NULL, NULL);
             } else {

@@ -170,6 +170,16 @@ int main(void)
               "cursor already on pickable stays in range");
     }
 
+    /* struggle move data */
+    CHECK(MOVES[MV_STRUGGLE].power == 50 && MOVES[MV_STRUGGLE].effect == ME_RECOIL,
+          "struggle is a 50-power recoil move");
+    {
+        Creature s;
+        creature_init(&s, SP_FLUFFIT, 5, 0);
+        memset(s.pp, 0, sizeof(s.pp));
+        CHECK(pick_enemy_move(&s, &s) == -1, "all PP spent -> no usable move");
+    }
+
     /* music data sanity (audio engine data layer) */
     {
         CHECK(MUSIC[MUS_TITLE].bpm >= 40 && MUSIC[MUS_TITLE].bpm <= 240,

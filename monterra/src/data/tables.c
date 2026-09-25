@@ -1,15 +1,6 @@
 /* Data tables: moves, type chart, species, items. All original content. */
 #include "game.h"
 
-/* Move ids */
-enum {
-    MV_TACKLE, MV_SCRATCH, MV_GROWL, MV_TAILWHIP, MV_HOWL, MV_HARDEN,
-    MV_QUICKPECK, MV_WINGSLAP, MV_GUST, MV_EMBER, MV_FLAMEBURST,
-    MV_WATERGUN, MV_BUBBLEBEAM, MV_VINEWHIP, MV_LEAFBLADE, MV_ABSORB,
-    MV_SPARK, MV_THUNDERJOLT, MV_ROCKTOSS, MV_BOULDERSLAM, MV_BUGBITE,
-    MV_STRINGSHOT, MV_SLEEPPOWDER, MV_HEADBUTT
-};
-
 #define M(name, type, power, acc, pp, cat, prio, eff, chance, stat, stages, tgt) \
     { name, type, power, acc, pp, cat, prio, eff, chance, stat, stages, tgt }
 
@@ -38,6 +29,7 @@ const Move MOVES[NUM_MOVES] = {
     M("STRING SHOT",  TY_BUG,      0,  95, 40, MC_STATUS, 0, ME_NONE,    0, ST_SPE, -1, MT_FOE),
     M("SLEEP POWDER", TY_GRASS,    0,  75, 15, MC_STATUS, 0, ME_SLEEP, 100,  -1, 0, MT_FOE),
     M("HEADBUTT",     TY_NORMAL,  70, 100, 15, MC_PHYS, 0, ME_NONE,      0,  -1, 0, MT_FOE),
+    M("STRUGGLE",     TY_NORMAL,  50, 100,  1, MC_PHYS, 0, ME_RECOIL,    0,  -1, 0, MT_FOE),
 };
 
 static const char *TYPE_NAMES[TY_COUNT] = {

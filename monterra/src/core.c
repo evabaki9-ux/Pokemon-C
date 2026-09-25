@@ -273,7 +273,7 @@ int pick_enemy_move(const Creature *enemy, const Creature *player)
     int usable[4], n = 0;
     for (int i = 0; i < 4; i++)
         if (enemy->moves[i] != 0xFF && enemy->pp[i] > 0) usable[n++] = i;
-    if (n == 0) return -1; /* struggle not implemented: fallback to first move */
+    if (n == 0) return -1; /* no usable move: caller falls back to Struggle */
     /* 65%: best expected damage; else random */
     if (rand() % 100 < 65) {
         int best = usable[0], best_d = -1;
