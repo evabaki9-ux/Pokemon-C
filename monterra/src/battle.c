@@ -55,6 +55,11 @@ static void q_pop(void)
 {
     qhead++;
     qins = qhead;
+    /* queue drained: recycle storage so long battles can't exhaust it */
+    if (qhead >= qlen) {
+        qhead = qins = qlen = 0;
+        pool_next = 0;
+    }
 }
 
 /* queue a step to run after everything already ordered (call order = run order) */
@@ -144,8 +149,10 @@ static void battle_common_init(void)
     B.phase = BP_EXEC;
     q_clear();
     g.active_slot = 0;
-    for (int i = 0; i < g.party_n; i++)
+    for (int i = 0; i < g.party_n; i++) {
+        g.party[i].conf_turns = 0; /* volatile effects don't persist */
         if (g.party[i].hp > 0) { g.active_slot = (uint8_t)i; break; }
+    }
     B.php_show = (int16_t)pc()->hp;
 }
 
@@ -445,6 +452,24 @@ static void resolve_xp(void)
 /* ---- checks ---- */
 static void resolve_check(void)
 {
+    /* player faint checked first: on a Struggle-recoil double KO the
+     * player's creature fainted last, so the player loses the exchange */
+    if (pc()->hp == 0) {
+        q_clear();
+        qf(BS_FAINT, 0, 0, NULL, NULL);
+        q_msgf("%s fainted!", pname());
+        bool any = false;
+        for (int i = 0; i < g.party_n; i++)
+            if (g.party[i].hp > 0) { any = true; break; }
+        if (any) {
+            B.forced_switch = true;
+        } else {
+            q_msg("You're out of usable creatures!", NULL);
+            q_msg("You panicked and rushed home...", NULL);
+            qf(BS_END, 1, 0, NULL, NULL);
+        }
+        return;
+    }
     if (B.enemy.hp == 0) {
         q_clear();
         qf(BS_FAINT, 1, 0, NULL, NULL);
@@ -459,22 +484,6 @@ static void resolve_check(void)
             qf(BS_END, 3, 0, NULL, NULL);
         } else {
             qf(BS_END, 0, 0, NULL, NULL);
-        }
-        return;
-    }
-    if (pc()->hp == 0) {
-        q_clear();
-        qf(BS_FAINT, 0, 0, NULL, NULL);
-        q_msgf("%s fainted!", pname());
-        bool any = false;
-        for (int i = 0; i < g.party_n; i++)
-            if (g.party[i].hp > 0) { any = true; break; }
-        if (any) {
-            B.forced_switch = true;
-        } else {
-            q_msg("You're out of usable creatures!", NULL);
-            q_msg("You panicked and rushed home...", NULL);
-            qf(BS_END, 1, 0, NULL, NULL);
         }
         return;
     }
@@ -513,12 +522,16 @@ static void resolve_end_turn(void)
         qf(BS_WAIT_HP, 0, 0, NULL, NULL);
         q_msgf("%s is hurt by poison!", ename());
     }
+    /* status damage can faint: resolve it before the next menu */
+    if (c->hp == 0 || e->hp == 0)
+        qf(BS_CHECK, 0, 0, NULL, NULL);
 }
 
 /* ---- catch ---- */
 static void resolve_throw(uint8_t item)
 {
     audio_sfx(SFX_THROW);
+    bool released = false;
     if (B.trainer) {
         q_msg("The trainer blocked the ORB!", NULL);
         q_msg("Don't be a thief!", NULL);
@@ -535,16 +548,22 @@ static void resolve_throw(uint8_t item)
         qf(BS_SHAKE, 18, 0, NULL, NULL);
         dex_own(B.enemy.species);
         bool stored = false;
+        B.enemy.ailment = AIL_NONE;
+        B.enemy.conf_turns = 0;
+        B.enemy.sleep_turns = 0;
         if (g.party_n < MAX_PARTY) {
-            g.party[g.party_n] = B.enemy;
-            g.party[g.party_n].ailment = AIL_NONE;
-            g.party_n++;
-        } else {
+            g.party[g.party_n++] = B.enemy;
+        } else if (g.storage_n < STORAGE_MAX) {
+            g.storage[g.storage_n++] = B.enemy;
             stored = true;
+        } else {
+            released = true;
         }
         q_msgf("Gotcha! %s was caught!", ename());
         if (stored)
             q_msg("Party full! Sent to STORAGE.", NULL);
+        if (released)
+            q_msg("No room left - it was released!", NULL);
         qf(BS_END, 2, 0, NULL, NULL);
     } else {
         q_msg("Oh no! It broke free!", NULL);
@@ -558,12 +577,24 @@ static void advance_hp_anim(void)
     Creature *c = pc();
     int pspeed = c->stats[ST_HP] / 24;
     if (pspeed < 1) pspeed = 1;
-    if (B.php_show < (int)c->hp) B.php_show = (int16_t)(B.php_show + pspeed);
-    if (B.php_show > (int)c->hp) B.php_show = (int16_t)(B.php_show - pspeed);
+    int pt = (int)c->hp;
+    if (B.php_show < pt) {
+        B.php_show = (int16_t)(B.php_show + pspeed);
+        if (B.php_show > pt) B.php_show = (int16_t)pt; /* clamp, never bounce */
+    } else if (B.php_show > pt) {
+        B.php_show = (int16_t)(B.php_show - pspeed);
+        if (B.php_show < pt) B.php_show = (int16_t)pt;
+    }
     int espeed = B.enemy.stats[ST_HP] / 24;
     if (espeed < 1) espeed = 1;
-    if (B.ehp_show < (int)B.enemy.hp) B.ehp_show = (int16_t)(B.ehp_show + espeed);
-    if (B.ehp_show > (int)B.enemy.hp) B.ehp_show = (int16_t)(B.ehp_show - espeed);
+    int et = (int)B.enemy.hp;
+    if (B.ehp_show < et) {
+        B.ehp_show = (int16_t)(B.ehp_show + espeed);
+        if (B.ehp_show > et) B.ehp_show = (int16_t)et;
+    } else if (B.ehp_show > et) {
+        B.ehp_show = (int16_t)(B.ehp_show - espeed);
+        if (B.ehp_show < et) B.ehp_show = (int16_t)et;
+    }
 }
 
 static bool hp_settled(void)
@@ -631,7 +662,10 @@ void battle_update(void)
                 q_pop();
             return;
         case BS_FAINT:
-            audio_sfx(SFX_FAINT);
+            if (!s->b) {
+                audio_sfx(SFX_FAINT);
+                s->b = 1; /* play once, not every frame */
+            }
             if (s->a == 0) {
                 B.faint_off[0] += 6;
                 if (B.faint_off[0] >= 64) { B.faint_off[0] = 200; q_pop(); }
@@ -805,7 +839,10 @@ void battle_update(void)
                 resolve_throw((uint8_t)item);
             } else { /* potion on active creature */
                 Creature *c = pc();
-                if (c->hp >= c->stats[ST_HP]) {
+                if (c->hp == 0) {
+                    q_msg("It's fainted - it needs a real rest!", NULL);
+                    qf(BS_MENU, 0, 0, NULL, NULL);
+                } else if (c->hp >= c->stats[ST_HP]) {
                     q_msg("It won't have any effect.", NULL);
                     qf(BS_MENU, 0, 0, NULL, NULL);
                 } else {

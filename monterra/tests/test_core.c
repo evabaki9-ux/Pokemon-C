@@ -182,6 +182,10 @@ int main(void)
         CHECK(storage_deposit(0) == -1, "cannot store the last partner");
         CHECK(storage_withdraw(0) == 0, "withdraw from box");
         CHECK(g.party_n == 2 && g.storage_n == 0, "counts restored");
+        /* must keep one HEALTHY partner: knock one out, try to box the other */
+        g.party[1].hp = 0;
+        CHECK(storage_deposit(0) == -3, "cannot box the last healthy partner");
+        g.party[1].hp = g.party[1].stats[ST_HP];
         CHECK(g.party[1].species == SP_EMBERIT, "withdrawn creature back");
         /* save round-trip with storage populated (v3) */
         CHECK(storage_deposit(1) == 0, "redeposit for save test");

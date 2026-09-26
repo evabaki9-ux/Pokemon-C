@@ -266,6 +266,7 @@ static void warp_do(void)
     g.hop = 0;
     spotted_frames = 0;
     spotted_npc = NULL;
+    warp_pending = false;
 }
 
 static void check_warp(int tx, int ty)
@@ -291,10 +292,14 @@ static void check_warp(int tx, int ty)
     }
 }
 
-static void roll_encounter(void)
+static void roll_encounter(int tx, int ty)
 {
     const MapDef *m = &MAPS[g.map];
     if (m->nencs == 0 || m->enc_rate == 0)
+        return;
+    /* wild creatures live in tall grass only */
+    if (tx < 0 || ty < 0 || tx >= m->w || ty >= m->h ||
+        m->rows[ty][tx] != '"')
         return;
     if (rand() % 100 >= m->enc_rate)
         return;
@@ -321,9 +326,10 @@ static void roll_encounter(void)
 static struct { bool open; int cursor; } menu;
 static int pending_potion = -1;
 
-static const char *const MENU_ITEMS[] = { "PARTNERS", "BAG", "SOUND", "CLOSE" };
-#define MENU_N 4
-#define MENU_SOUND 2
+static const char *const MENU_ITEMS[] = { "PARTNERS", "BAG", "SAVE", "SOUND", "CLOSE" };
+#define MENU_N 5
+#define MENU_SAVE 2
+#define MENU_SOUND 3
 
 /* ---- update ---- */
 void ow_reset(uint8_t map, uint8_t x, uint8_t y)
@@ -476,6 +482,18 @@ void ow_update(void)
             int slot = party_result();
             if (pending_potion >= 0 && slot >= 0) {
                 Creature *c = &g.party[slot];
+                if (c->hp == 0) {
+                    const char *lines[] = { "It's too weak! It needs a", "real rest first." };
+                    dlg_start(lines, 2);
+                    pending_potion = -1;
+                    return;
+                }
+                if (c->hp >= c->stats[ST_HP]) {
+                    const char *lines[] = { "It won't have any effect." };
+                    dlg_start(lines, 1);
+                    pending_potion = -1;
+                    return;
+                }
                 uint16_t before = c->hp;
                 uint16_t heal = (uint16_t)ITEMS[pending_potion].power;
                 c->hp = (uint16_t)(c->hp + heal);
@@ -498,10 +516,12 @@ void ow_update(void)
         bag_update();
         if (!bag_active()) {
             int item = bag_result();
-            if (ITEMS[item].kind == IK_HEAL && item >= 0) {
+            if (item < 0) {
+                /* cancelled: nothing to do */
+            } else if (ITEMS[item].kind == IK_HEAL) {
                 pending_potion = item;
                 party_open(PM_TARGET);
-            } else if (item >= 0) {
+            } else {
                 const char *lines[] = { "Can't use that here." };
                 dlg_start(lines, 1);
             }
@@ -524,7 +544,17 @@ void ow_update(void)
             menu.open = false;
             if (menu.cursor == 0) party_open(PM_VIEW);
             else if (menu.cursor == 1) bag_open(BM_OVERWORLD);
-            else if (menu.cursor == MENU_SOUND)
+            else if (menu.cursor == MENU_SAVE) {
+                const char *lines[2] = { "Saving...", NULL };
+                if (save_write()) {
+                    lines[0] = "Game saved!";
+                    lines[1] = "See you soon, partner.";
+                    dlg_start(lines, 2);
+                } else {
+                    lines[0] = "Could not save!";
+                    dlg_start(lines, 1);
+                }
+            } else if (menu.cursor == MENU_SOUND)
                 audio_toggle_mute();
         }
         return;
@@ -541,7 +571,7 @@ void ow_update(void)
             int tx = (g.px + 8) / 16, ty = (g.py + 15) / 16;
             check_warp(tx, ty);
             if (!warp_pending && !hop)
-                roll_encounter();
+                roll_encounter(tx, ty);
             if (!warp_pending && g_battle_req.active == 0)
                 check_trainer_sight();
         }

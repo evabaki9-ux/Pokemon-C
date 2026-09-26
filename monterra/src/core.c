@@ -274,6 +274,12 @@ int storage_deposit(int party_slot)
         return -1; /* never store your last partner */
     if (g.storage_n >= STORAGE_MAX)
         return -2;
+    /* you must keep at least one healthy creature to adventure with */
+    bool healthy_left = false;
+    for (int i = 0; i < g.party_n; i++)
+        if (i != party_slot && g.party[i].hp > 0) { healthy_left = true; break; }
+    if (!healthy_left)
+        return -3;
     g.storage[g.storage_n++] = g.party[party_slot];
     for (int i = party_slot; i < g.party_n - 1; i++)
         g.party[i] = g.party[i + 1];

@@ -212,10 +212,26 @@ static void cb_title_start(void)
     game_reset();
 }
 
+static void cb_title_continue(void)
+{
+    if (!save_read())
+        game_reset(); /* corrupt/missing save: fresh start */
+}
+
+static int title_cur;
+
 static void title_update(void)
 {
-    if (g_in.pressed[BTN_A] && g.fade_dir == 0) {
-        start_fade(cb_title_start);
+    if (g.fade_dir != 0)
+        return;
+    bool cont = save_exists();
+    if (cont && g_in.pressed[BTN_UP]) { title_cur = 0; audio_sfx(SFX_BLIP); }
+    if (cont && g_in.pressed[BTN_DOWN]) { title_cur = 1; audio_sfx(SFX_BLIP); }
+    if (g_in.pressed[BTN_A]) {
+        if (cont && title_cur == 0)
+            start_fade(cb_title_continue);
+        else
+            start_fade(cb_title_start);
     }
 }
 
@@ -232,8 +248,15 @@ static void title_draw(SDL_Renderer *r)
     SDL_Color gold = { 248, 208, 96, 255 };
     draw_text_shadow(r, 28, 34, "MONTERRA", gold, 3);
     draw_text_shadow(r, 44, 66, "LEGENDS OF THE VELDT", white, 1);
-    if ((g.tick >> 4) & 1)
+    if (save_exists()) {
+        SDL_Color dim = { 150, 148, 140, 255 };
+        draw_text_shadow(r, 80, 98, "CONTINUE", title_cur == 0 ? white : dim, 1);
+        draw_text_shadow(r, 84, 112, "NEW GAME", title_cur == 1 ? white : dim, 1);
+        if ((g.tick >> 4) & 1)
+            draw_text_shadow(r, 68, 100 + title_cur * 14, ">", gold, 1);
+    } else if ((g.tick >> 4) & 1) {
         draw_text_shadow(r, 72, 104, "PRESS Z", white, 1);
+    }
     draw_text_shadow(r, 20, 146, "AN ORIGINAL MONSTER RPG", white, 1);
 }
 
@@ -250,9 +273,17 @@ static void frame(void)
     } else {
         /* battle request handling */
         if (g_battle_req.active && g.mode == MODE_OVERWORLD) {
-            pending_req = g_battle_req;
-            g_battle_req.active = 0;
-            start_fade(cb_start_battle);
+            bool any_alive = false;
+            for (int i = 0; i < g.party_n; i++)
+                if (g.party[i].hp > 0) { any_alive = true; break; }
+            if (any_alive) {
+                pending_req = g_battle_req;
+                g_battle_req.active = 0;
+                start_fade(cb_start_battle);
+            } else {
+                /* nothing healthy: cancel the encounter, stay in town */
+                g_battle_req.active = 0;
+            }
         } else if (g.mode == MODE_BATTLE && battle_over()) {
             start_fade(cb_end_battle);
         } else if (g.mode == MODE_TITLE) {
