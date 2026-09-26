@@ -32,7 +32,7 @@ Click the game once if keys don't respond.</div>
 <script>
   /* keep arrow keys / space on the game: never scroll the page */
   document.addEventListener('keydown', function (e) {
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].indexOf(e.key) >= 0)
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Tab'].indexOf(e.key) >= 0)
       e.preventDefault();
   });
   var Module = {

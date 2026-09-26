@@ -453,7 +453,7 @@ void shop_draw(SDL_Renderer *r)
     draw_text(r, 10, SCREEN_H - 22, buf, dark, 1);
     draw_text(r, 10, SCREEN_H - 12, "Z:BUY  X:EXIT", dark, 1);
     if (sm.msg[0])
-        draw_text(r, 112, SCREEN_H - 22, sm.msg, red, 1);
+        draw_text(r, 10, SCREEN_H - 34, sm.msg, red, 1);
 }
 
 
@@ -511,7 +511,9 @@ void storage_update(void)
                 audio_sfx(SFX_CONFIRM);
                 snprintf(stm.msg, sizeof(stm.msg), "%s was stored!", name);
             } else if (rc == -1) {
-                snprintf(stm.msg, sizeof(stm.msg), "Can't store your last partner!");
+                snprintf(stm.msg, sizeof(stm.msg), "Keep your last partner!");
+            } else if (rc == -3) {
+                snprintf(stm.msg, sizeof(stm.msg), "Keep a healthy partner!");
             } else {
                 snprintf(stm.msg, sizeof(stm.msg), "The box is full!");
             }

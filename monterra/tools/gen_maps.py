@@ -176,7 +176,8 @@ dlg_assistant = [
 dlg_hiker = [
     "Whoa there! A landslide has",
     "closed the road north.",
-    "Come back once it's cleared!",
+    "Beat both trainers here and",
+    "I'll have it cleared for you!",
     None,
 ]
 dlg_villager = [
@@ -333,7 +334,7 @@ NPCS = {
 }
 SIGNS = {
     3: [(15, 16, "VERDAN TOWN\nWhere journeys sprout.")],
-    4: [(16, 27, "ROUTE 1\nVERDAN TOWN - MT. CINDER")],
+    4: [(16, 27, "ROUTE 1\nVERDAN TOWN - EMBERWOOD PASS")],
     6: [(18, 24, "ROUTE 2\nEMBERWOOD PASS"),
         (18, 1, "KEEPER'S POST\nGUARDIAN OF THE PASS")],
 }
@@ -351,10 +352,10 @@ ENCS = {
         (6, 8, 10, 15),   # MOSSLING
         (7, 9, 11, 15),   # SPARKIT
         (4, 10, 12, 15),  # PEBBLY
-        (10, 10, 12, 10), # LOPPIN (evolved fluffit)
-        (8, 12, 12, 4),   # TORRENTOL (rare evolved)
-        (9, 12, 12, 3),   # VERDANTIS (rare evolved)
-        (11, 12, 12, 3),  # PYROGON (rare evolved)
+        (10, 16, 18, 10), # LOPPIN (evolved fluffit, evo 18)
+        (8, 16, 16, 4),   # TORRENTOL (rare evolved)
+        (9, 16, 16, 3),   # VERDANTIS (rare evolved)
+        (11, 16, 16, 3),  # PYROGON (rare evolved)
     ],
 }
 

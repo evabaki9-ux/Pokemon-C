@@ -148,14 +148,15 @@ DamageResult move_damage(const Creature *att, const Creature *def,
     uint32_t L = att->level;
     uint32_t dmg = ((2 * L / 5 + 2) * mv->power * A / (D ? D : 1)) / 50 + 2;
 
-    /* STAB */
-    if (mv->type == a->type1 || mv->type == a->type2) dmg = dmg * 15 / 10;
-    /* type effectiveness */
-    dmg = dmg * (uint32_t)eff10 / 10;
+    /* Struggle is typeless: no STAB, no type effectiveness */
+    if (move_id != MV_STRUGGLE) {
+        if (mv->type == a->type1 || mv->type == a->type2) dmg = dmg * 15 / 10;
+        dmg = dmg * (uint32_t)eff10 / 10;
+    }
     /* random 85-100% */
     dmg = dmg * (85 + rand() % 16) / 100;
     /* crit */
-    int crit_chance = (mv->effect == ME_HIGH_CRIT) ? 8 : 1;
+    int crit_chance = (mv->effect == ME_HIGH_CRIT) ? 2 : 1;
     if (rand() % 16 < crit_chance) {
         r.crit = 1;
         dmg *= 2;

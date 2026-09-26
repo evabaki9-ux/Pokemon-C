@@ -399,7 +399,7 @@ static void handle_after_dialog(void)
                 "healed. Come back any time!",
             };
             dlg_start(healed, 3);
-        } else if (result == -1) {
+        } else { /* NO or cancelled - same warm goodbye */
             const char *bye[] = { "NURSE: We hope to see you", "again!" };
             dlg_start(bye, 2);
         }
@@ -441,7 +441,7 @@ static void try_move(void)
         g.hop = 1;
         return;
     }
-    if (blocked(nx, ny)) {
+    if (t == 'L' || blocked(nx, ny)) { /* ledges: hop down only, never step on */
         if (bump_cd <= 0) {
             audio_sfx(SFX_BUMP);
             bump_cd = 24;
@@ -635,7 +635,7 @@ static int tile_char_to_id(int c)
     case 'p': return TI_PLANT;
     case 'r': return TI_CARPET;
     case 'g': return TI_GRASS_TOWN;
-    default: return TI_GRASS;
+    default: return TI_TREE; /* off-map and unknown tiles are trees */
     }
 }
 
@@ -653,8 +653,8 @@ void ow_draw(SDL_Renderer *r)
     SDL_SetRenderDrawColor(r, 16, 16, 24, 255);
     SDL_RenderClear(r);
 
-    int x0 = cx / 16, y0 = cy / 16;
-    int x1 = (cx + SCREEN_W) / 16, y1 = (cy + SCREEN_H) / 16;
+    int x0 = cx >> 4, y0 = cy >> 4; /* arithmetic shift = floor for negatives */
+    int x1 = (cx + SCREEN_W) >> 4, y1 = (cy + SCREEN_H) >> 4;
     for (int ty = y0; ty <= y1; ty++) {
         for (int tx = x0; tx <= x1; tx++) {
             int t = tile_at(tx, ty);

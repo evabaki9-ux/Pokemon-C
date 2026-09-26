@@ -191,7 +191,8 @@ static const char *const dlg_assistant[] = {
 static const char *const dlg_hiker[] = {
     "Whoa there! A landslide has",
     "closed the road north.",
-    "Come back once it's cleared!",
+    "Beat both trainers here and",
+    "I'll have it cleared for you!",
     NULL};
 static const char *const dlg_villager[] = {
     "Tall grass hides creatures!",
@@ -293,7 +294,7 @@ static const SignDef signs_3[] = {
 };
 
 static const SignDef signs_4[] = {
-    {16, 27, "ROUTE 1\nVERDAN TOWN - MT. CINDER"},
+    {16, 27, "ROUTE 1\nVERDAN TOWN - EMBERWOOD PASS"},
 };
 
 static const SignDef signs_6[] = {
@@ -315,10 +316,10 @@ static const Encounter encs_6[] = {
     {6, 8, 10, 15},
     {7, 9, 11, 15},
     {4, 10, 12, 15},
-    {10, 10, 12, 10},
-    {8, 12, 12, 4},
-    {9, 12, 12, 3},
-    {11, 12, 12, 3},
+    {10, 16, 18, 10},
+    {8, 16, 16, 4},
+    {9, 16, 16, 3},
+    {11, 16, 16, 3},
 };
 
 const MapDef MAPS[NUM_MAPS] = {

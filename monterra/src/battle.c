@@ -255,6 +255,10 @@ static void resolve_move(uint8_t actor, uint8_t slot)
     q_msgf("%s used %s!", an, mv->name);
 
     if (mv->category == MC_STATUS) {
+        if (mv->accuracy > 0 && (int)(rand() % 100) >= mv->accuracy) {
+            q_msgf("%s's attack missed!", an);
+            return;
+        }
         if (mv->stat_id >= 0) {
             int8_t *tst = (mv->target == MT_SELF) ? ast : dst;
             const char *tn = (mv->target == MT_SELF) ? an : dn;
@@ -343,7 +347,7 @@ static void resolve_move(uint8_t actor, uint8_t slot)
             q_msgf("%s was %s!", dn,
                    mv->effect == ME_BURN ? "burned" :
                    mv->effect == ME_PARA ? "paralyzed" :
-                   mv->effect == ME_POISON ? "poisoned" : "frozen solid!");
+                   mv->effect == ME_POISON ? "poisoned" : "frozen solid");
         } else if (mv->stat_id >= 0 && mv->target == MT_FOE) {
             int8_t cur = dst[mv->stat_id];
             int8_t nx = (int8_t)(cur + mv->stat_stages);
@@ -375,27 +379,25 @@ static void build_turn(int pslot) /* pslot < 0: forced Struggle */
     int emv = pick_enemy_move(&B.enemy, pc());
     const Move *pm = (pslot < 0) ? &MOVES[MV_STRUGGLE]
                                  : &MOVES[pc()->moves[pslot]];
+    const Move *em = (emv >= 0) ? &MOVES[B.enemy.moves[emv]]
+                                : &MOVES[MV_STRUGGLE]; /* out of PP */
     bool player_first = true;
-    if (emv >= 0) {
-        const Move *em = &MOVES[B.enemy.moves[emv]];
-        if (em->priority > pm->priority)
+    if (em->priority > pm->priority)
+        player_first = false;
+    else if (em->priority == pm->priority) {
+        uint32_t ps = eff_speed(pc(), B.pstages);
+        uint32_t es = eff_speed(&B.enemy, B.estages);
+        if (es > ps || (es == ps && rand() % 2 == 0))
             player_first = false;
-        else if (em->priority == pm->priority) {
-            uint32_t ps = eff_speed(pc(), B.pstages);
-            uint32_t es = eff_speed(&B.enemy, B.estages);
-            if (es > ps || (es == ps && rand() % 2 == 0))
-                player_first = false;
-        }
     }
+    uint8_t eslot = (uint8_t)(emv >= 0 ? emv : 0xFF);
     if (player_first) {
         qf(BS_ACT_MOVE, 0, (uint8_t)pslot, NULL, NULL);
         qf(BS_CHECK, 0, 0, NULL, NULL);
-        if (emv >= 0) {
-            qf(BS_ACT_MOVE, 1, (uint8_t)emv, NULL, NULL);
-            qf(BS_CHECK, 0, 0, NULL, NULL);
-        }
+        qf(BS_ACT_MOVE, 1, eslot, NULL, NULL);
+        qf(BS_CHECK, 0, 0, NULL, NULL);
     } else {
-        qf(BS_ACT_MOVE, 1, (uint8_t)emv, NULL, NULL);
+        qf(BS_ACT_MOVE, 1, eslot, NULL, NULL);
         qf(BS_CHECK, 0, 0, NULL, NULL);
         qf(BS_ACT_MOVE, 0, (uint8_t)pslot, NULL, NULL);
         qf(BS_CHECK, 0, 0, NULL, NULL);
@@ -782,7 +784,8 @@ void battle_update(void)
                     uint32_t ps = eff_speed(pc(), B.pstages);
                     uint32_t es = eff_speed(&B.enemy, B.estages);
                     uint32_t odds = (es ? ps * 128 / es : 256) + 30u * (uint32_t)B.run_attempts;
-                    odds %= 256;
+                    if (odds > 255)
+                        odds = 255; /* clamp, never wrap around to 0 */
                     if ((uint32_t)(rand() % 256) < odds) {
                         q_msg("Got away safely!", NULL);
                         qf(BS_END, 0, 0, NULL, NULL);
@@ -913,13 +916,19 @@ void battle_draw(SDL_Renderer *r)
     SDL_Color dark = { 56, 56, 64, 255 };
     SDL_Color red = { 200, 48, 48, 255 };
     char buf[40];
-    draw_panel(r, 4, 4, 108, 30);
+    draw_panel(r, 4, 4, 118, 30);
     snprintf(buf, sizeof(buf), "%s", ename());
     draw_text(r, 10, 8, buf, dark, 1);
     snprintf(buf, sizeof(buf), "Lv%u", B.enemy.level);
-    draw_text(r, 74, 8, buf, dark, 1);
-    draw_hpbar(r, 8, 22, 98, (uint16_t)(B.ehp_show < 0 ? 0 : B.ehp_show),
+    draw_text(r, 86, 8, buf, dark, 1);
+    draw_hpbar(r, 8, 22, 84, (uint16_t)(B.ehp_show < 0 ? 0 : B.ehp_show),
                B.enemy.stats[ST_HP]);
+    if (B.enemy.ailment == AIL_BURN) draw_text(r, 98, 22, "BRN", (SDL_Color){ 224, 96, 32, 255 }, 1);
+    else if (B.enemy.ailment == AIL_PARA) draw_text(r, 98, 22, "PAR", (SDL_Color){ 200, 176, 32, 255 }, 1);
+    else if (B.enemy.ailment == AIL_SLEEP) draw_text(r, 98, 22, "SLP", (SDL_Color){ 120, 120, 168, 255 }, 1);
+    else if (B.enemy.ailment == AIL_POISON) draw_text(r, 98, 22, "PSN", (SDL_Color){ 168, 72, 208, 255 }, 1);
+    else if (B.enemy.ailment == AIL_FREEZE) draw_text(r, 98, 22, "FRZ", (SDL_Color){ 96, 184, 224, 255 }, 1);
+    else if (B.enemy.conf_turns > 0) draw_text(r, 98, 22, "CNF", (SDL_Color){ 208, 144, 48, 255 }, 1);
 
     /* player panel */
     draw_panel(r, 122, 68, 114, 40);
@@ -977,7 +986,7 @@ void battle_draw(SDL_Renderer *r)
         draw_panel(r, 122, SCREEN_H - TEXTBOX_H - 2, 116, TEXTBOX_H);
         if (pc()->moves[B.fight_cur] != 0xFF) {
             const Move *mv = &MOVES[pc()->moves[B.fight_cur]];
-            snprintf(buf, sizeof(buf), "%s/", type_name(mv->type));
+            snprintf(buf, sizeof(buf), "%s", type_name(mv->type));
             draw_text(r, 130, SCREEN_H - TEXTBOX_H + 3, buf, dark, 1);
             snprintf(buf, sizeof(buf), "PP %u/%u", pc()->pp[B.fight_cur], mv->pp);
             draw_text(r, 130, SCREEN_H - TEXTBOX_H + 15, buf, dark, 1);
