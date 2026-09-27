@@ -22,33 +22,6 @@ static SDL_Renderer *rend;
 static bool running = true;
 
 /* ---- global helpers ---- */
-void bag_add(uint8_t item)
-{
-    if (g.bag_n < MAX_BAG)
-        g.bag[g.bag_n++] = item;
-}
-
-int bag_count(uint8_t item)
-{
-    int n = 0;
-    for (int i = 0; i < g.bag_n; i++)
-        if (g.bag[i] == item)
-            n++;
-    return n;
-}
-
-void bag_consume(uint8_t item)
-{
-    for (int i = 0; i < g.bag_n; i++) {
-        if (g.bag[i] == item) {
-            for (int j = i; j < g.bag_n - 1; j++)
-                g.bag[j] = g.bag[j + 1];
-            g.bag_n--;
-            return;
-        }
-    }
-}
-
 void heal_party(void)
 {
     for (int i = 0; i < g.party_n; i++) {

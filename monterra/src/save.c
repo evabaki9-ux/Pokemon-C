@@ -4,7 +4,7 @@
 #include "game.h"
 
 #define SAVE_MAGIC "MNTS"
-#define SAVE_VERSION 3
+#define SAVE_VERSION 4
 
 /* ---- little writer/reader ---- */
 typedef struct {
@@ -23,6 +23,12 @@ static void w16(Wr *w, uint16_t v)
 {
     w8(w, (uint8_t)(v & 0xFF));
     w8(w, (uint8_t)(v >> 8));
+}
+
+static void w32(Wr *w, uint32_t v)
+{
+    w16(w, (uint16_t)(v & 0xFFFF));
+    w16(w, (uint16_t)(v >> 16));
 }
 
 static void wbytes(Wr *w, const void *src, size_t n)
@@ -50,6 +56,12 @@ static uint16_t r16(Rd *r)
     return (uint16_t)(lo | (hi << 8));
 }
 
+static uint32_t r32(Rd *r)
+{
+    uint32_t lo = r16(r), hi = r16(r);
+    return lo | (hi << 16);
+}
+
 static void rbytes(Rd *r, void *dst, size_t n)
 {
     uint8_t *d = dst;
@@ -62,7 +74,7 @@ static void save_creature(Wr *w, const Creature *c)
 {
     w8(w, c->species);
     w8(w, c->level);
-    w16(w, c->xp);
+    w32(w, c->xp); /* v4: 32-bit (Lv41 = 68,921 xp) */
     w16(w, c->hp);
     for (int i = 0; i < 6; i++)
         w16(w, c->stats[i]);
@@ -76,12 +88,14 @@ static void save_creature(Wr *w, const Creature *c)
     w8(w, c->sleep_turns);
 }
 
-static bool load_creature(Rd *r, Creature *c)
+static bool load_creature(Rd *r, Creature *c, bool xp32)
 {
     memset(c, 0, sizeof(*c));
     c->species = r8(r);
     c->level = r8(r);
-    c->xp = r16(r);
+    c->xp = xp32 ? r32(r) : r16(r); /* v4: 32-bit */
+    if (c->xp > xp_for_level(100))
+        return false;
     c->hp = r16(r);
     for (int i = 0; i < 6; i++)
         c->stats[i] = r16(r);
@@ -120,8 +134,10 @@ size_t save_encode(uint8_t *buf, size_t cap)
     for (int i = 0; i < g.party_n; i++)
         save_creature(&w, &g.party[i]);
     w8(&w, g.bag_n);
-    for (int i = 0; i < g.bag_n; i++)
+    for (int i = 0; i < g.bag_n; i++) { /* v4: id + stack count */
         w8(&w, g.bag[i]);
+        w8(&w, g.bag_qty[i]);
+    }
     w16(&w, g.money);
     w8(&w, g.flags);
     wbytes(&w, g.dex_seen, sizeof(g.dex_seen));
@@ -160,8 +176,9 @@ bool save_decode(const uint8_t *buf, size_t len)
         t.party_n > MAX_PARTY || t.active_slot >= MAX_PARTY ||
         (t.party_n > 0 && t.active_slot >= t.party_n))
         return false;
+    bool xp32 = (ver >= 4);
     for (int i = 0; i < t.party_n; i++)
-        if (!load_creature(&r, &t.party[i]))
+        if (!load_creature(&r, &t.party[i], xp32))
             return false;
     t.bag_n = r8(&r);
     if (t.bag_n > MAX_BAG)
@@ -169,6 +186,10 @@ bool save_decode(const uint8_t *buf, size_t len)
     for (int i = 0; i < t.bag_n; i++) {
         t.bag[i] = r8(&r);
         if (t.bag[i] >= NUM_ITEM_IDS)
+            return false;
+        /* v4: stack count per slot; older saves carry 1 each */
+        t.bag_qty[i] = (ver >= 4) ? r8(&r) : 1;
+        if (t.bag_qty[i] < 1)
             return false;
     }
     t.money = r16(&r);
@@ -185,7 +206,7 @@ bool save_decode(const uint8_t *buf, size_t len)
         if (r.err || t.storage_n > STORAGE_MAX)
             return false;
         for (int i = 0; i < t.storage_n; i++)
-            if (!load_creature(&r, &t.storage[i]))
+            if (!load_creature(&r, &t.storage[i], xp32))
                 return false;
     }
 

@@ -192,7 +192,7 @@ static const char *const dlg_hiker[] = {
     "Whoa there! A landslide has",
     "closed the road north.",
     "Beat both trainers here and",
-    "I'll have it cleared for you!",
+    "I'll clear it for you!",
     NULL};
 static const char *const dlg_villager[] = {
     "Tall grass hides creatures!",
@@ -316,10 +316,10 @@ static const Encounter encs_6[] = {
     {6, 8, 10, 15},
     {7, 9, 11, 15},
     {4, 10, 12, 15},
-    {10, 16, 18, 10},
-    {8, 16, 16, 4},
-    {9, 16, 16, 3},
-    {11, 16, 16, 3},
+    {10, 18, 19, 2},
+    {8, 16, 16, 1},
+    {9, 16, 16, 1},
+    {11, 16, 16, 1},
 };
 
 const MapDef MAPS[NUM_MAPS] = {

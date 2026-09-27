@@ -30,6 +30,7 @@ enum {
     BS_XP,        /* award xp (with level/learn/evolve messages) */
     BS_SWITCH_IN, /* a=party slot: send creature out */
     BS_ENEMY_NEXT,/* trainer sends next creature */
+    BS_LEARN,     /* a=move id: learn it (asks before replacing) */
     BS_END,       /* a=result code: battle finishes */
 };
 
@@ -235,7 +236,9 @@ static void resolve_move(uint8_t actor, uint8_t slot)
     if (att->conf_turns > 0) {
         att->conf_turns--;
         if (att->conf_turns == 0) {
-            q_msgf("%s snapped out of confusion!", an);
+            char cl[48];
+            snprintf(cl, sizeof cl, "%s snapped out of", an);
+            q_msg(cl, "confusion!");
         } else if (rand() % 3 == 0) {
             q_msgf("%s is confused!", an);
             q_msg("It hurt itself in confusion!", NULL);
@@ -302,7 +305,7 @@ static void resolve_move(uint8_t actor, uint8_t slot)
         return;
     }
     if (r.effectiveness == -2) {
-        q_msgf("It doesn't affect %s...", dn);
+        q_msgf("No effect on %s...", dn);
         return;
     }
     int newhp = def->hp - r.damage;
@@ -418,7 +421,7 @@ static void resolve_xp(void)
     if (xp < 1) xp = 1;
     uint8_t oldlvl = c->level;
     int gained = 0;
-    creature_add_xp(c, (uint16_t)xp, &gained);
+    creature_add_xp(c, xp, &gained);
     q_msgf("%s gained %u EXP!", pname(), (unsigned)xp);
     if (gained > 0)
         q_msgf("%s grew to Lv%u!", pname(), c->level);
@@ -426,15 +429,8 @@ static void resolve_xp(void)
     const Species *sp = &SPECIES[c->species];
     for (int i = 0; i < LEARN_MAX && sp->learn[i] != LEARN_END; i++) {
         uint8_t lvl = (uint8_t)(sp->learn[i] >> 8);
-        if (lvl > oldlvl && lvl <= c->level) {
-            uint8_t mv = (uint8_t)(sp->learn[i] & 0xFF);
-            int replaced = -1;
-            if (learn_move(c, mv, &replaced)) {
-                if (replaced >= 0)
-                    q_msgf("Forgot %s...", MOVES[replaced].name);
-                q_msgf("Learned %s!", MOVES[mv].name);
-            }
-        }
+        if (lvl > oldlvl && lvl <= c->level)
+            qf(BS_LEARN, (uint8_t)(sp->learn[i] & 0xFF), 0, NULL, NULL);
     }
     /* evolution */
     sp = &SPECIES[c->species];
@@ -446,8 +442,10 @@ static void resolve_xp(void)
         c->species = evolved;
         creature_recalc_stats(c, 1);
         dex_own(evolved);
-        q_msgf("Congratulations! Your %s", oldname);
-        q_msgf("evolved into %s!", SPECIES[evolved].name);
+        char el1[48], el2[48];
+        snprintf(el1, sizeof el1, "Congratulations! %s", oldname);
+        snprintf(el2, sizeof el2, "evolved into %s!", SPECIES[evolved].name);
+        q_msg(el1, el2);
     }
 }
 
@@ -466,8 +464,8 @@ static void resolve_check(void)
         if (any) {
             B.forced_switch = true;
         } else {
-            q_msg("You're out of usable creatures!", NULL);
-            q_msg("You panicked and rushed home...", NULL);
+            q_msg("Out of usable creatures!", NULL);
+            q_msg("You rushed home to rest...", NULL);
             qf(BS_END, 1, 0, NULL, NULL);
         }
         return;
@@ -482,6 +480,7 @@ static void resolve_check(void)
         } else if (B.trainer) {
             q_msgf("You defeated %s!", B.tdef->name);
             g.money = (uint16_t)(g.money + B.tdef->reward);
+            if (g.money > 9999) g.money = 9999; /* wallet cap, no wrap */
             q_msgf("You got $%u for winning!", B.tdef->reward);
             qf(BS_END, 3, 0, NULL, NULL);
         } else {
@@ -561,11 +560,13 @@ static void resolve_throw(uint8_t item)
         } else {
             released = true;
         }
-        q_msgf("Gotcha! %s was caught!", ename());
+        char gl[48];
+        snprintf(gl, sizeof gl, "Gotcha! %s was", ename());
+        q_msg(gl, "caught!");
         if (stored)
             q_msg("Party full! Sent to STORAGE.", NULL);
         if (released)
-            q_msg("No room left - it was released!", NULL);
+            q_msg("No room - it was released!", NULL);
         qf(BS_END, 2, 0, NULL, NULL);
     } else {
         q_msg("Oh no! It broke free!", NULL);
@@ -633,6 +634,20 @@ void battle_update(void)
             g_dlg.done = false;
             if (qhead < qlen && q[qhead].kind == BS_MSG)
                 q_pop();
+            else if (qhead < qlen && q[qhead].kind == BS_LEARN) {
+                uint8_t mv = q[qhead].a;
+                q_pop();
+                if (g_dlg.result == 0) { /* FORGET the oldest move */
+                    int replaced = -1;
+                    learn_move(pc(), mv, &replaced);
+                    if (replaced >= 0) {
+                        q_msgf("Forgot %s...", MOVES[replaced].name);
+                        q_msgf("And learned %s!", MOVES[mv].name);
+                    }
+                } else { /* SKIP or B */
+                    q_msgf("Did not learn %s.", MOVES[mv].name);
+                }
+            }
         }
         return;
     }
@@ -663,6 +678,35 @@ void battle_update(void)
             if (hp_settled())
                 q_pop();
             return;
+        case BS_LEARN: {
+            Creature *c = pc();
+            uint8_t mv = s->a;
+            bool known = false, has_room = false;
+            for (int i = 0; i < 4; i++) {
+                if (c->moves[i] == mv) known = true;
+                if (c->moves[i] == 0xFF) has_room = true;
+            }
+            if (known) {
+                q_pop();
+                return;
+            }
+            if (has_room) {
+                int replaced = -1;
+                learn_move(c, mv, &replaced);
+                q_pop();
+                q_msgf("Learned %s!", MOVES[mv].name);
+                return;
+            }
+            /* knows 4 moves: never replace silently - ask the player */
+            static char l1[48], l2[48], l3[48];
+            snprintf(l1, sizeof l1, "%s wants to learn", pname());
+            snprintf(l2, sizeof l2, "%s!", MOVES[mv].name);
+            snprintf(l3, sizeof l3, "Forget %s?", MOVES[c->moves[0]].name);
+            const char *lines[3] = { l1, l2, l3 };
+            const char *ch[2] = { "FORGET", "SKIP" };
+            dlg_start_choice(lines, 3, ch, 2);
+            return; /* resolved when the dialog completes */
+        }
         case BS_FAINT:
             if (!s->b) {
                 audio_sfx(SFX_FAINT);
@@ -843,7 +887,7 @@ void battle_update(void)
             } else { /* potion on active creature */
                 Creature *c = pc();
                 if (c->hp == 0) {
-                    q_msg("It's fainted - it needs a real rest!", NULL);
+                    q_msg("It's fainted! It needs a", "real rest first.");
                     qf(BS_MENU, 0, 0, NULL, NULL);
                 } else if (c->hp >= c->stats[ST_HP]) {
                     q_msg("It won't have any effect.", NULL);

@@ -101,7 +101,7 @@ typedef struct {
 typedef struct {
     uint8_t species;
     uint8_t level;
-    uint16_t xp; /* total xp */
+    uint32_t xp; /* total xp */
     uint16_t hp;
     uint16_t stats[6];
     uint8_t ivs[6];
@@ -221,6 +221,7 @@ typedef struct {
     uint8_t party_n;
     uint8_t active_slot; /* battle: which party member is out */
     uint8_t bag[MAX_BAG];  /* item ids */
+    uint8_t bag_qty[MAX_BAG]; /* stack count per slot */
     uint8_t bag_n;
     uint16_t money;
     uint8_t flags;
@@ -239,8 +240,8 @@ extern GameState g;
 
 /* ---- core.c (pure logic, no SDL) ---- */
 void creature_init(Creature *c, uint8_t species, uint8_t level, uint8_t random_ivs);
-uint16_t xp_for_level(uint8_t level);
-void creature_add_xp(Creature *c, uint16_t amount, int *levels_gained);
+uint32_t xp_for_level(uint8_t level);
+void creature_add_xp(Creature *c, uint32_t amount, int *levels_gained);
 void creature_recalc_stats(Creature *c, int keep_ratio);
 int type_chart_lookup(uint8_t atk, uint8_t def); /* returns multiplier x10 */
 uint16_t stat_after_stage(uint16_t v, int8_t stage);

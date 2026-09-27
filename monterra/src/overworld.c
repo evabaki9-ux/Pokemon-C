@@ -100,8 +100,8 @@ static void talk_prof(void)
 {
     if (g.flags & FLAG_STARTER) {
         const char *post[] = {
-            "Take good care of your partner!",
-            "ROUTE 1 is just north of town.",
+            "Take good care of it!",
+            "ROUTE 1 is just north.",
             "Good luck out there!",
         };
         dlg_start(post, 3);
@@ -109,10 +109,10 @@ static void talk_prof(void)
         return;
     }
     const char *intro[] = {
-        "PROF. MAPLE: Ah, right on time!",
-        "I study the wild creatures of",
-        "the VELDT region. And you are",
-        "setting out today, aren't you?",
+        "PROF. MAPLE: Right on time!",
+        "I study the wild creatures",
+        "of the VELDT region. You're",
+        "setting out today, right?",
     };
     const char *choices[] = { "EMBERIT", "DEWLIN", "SPROUTLE" };
     dlg_start_choice(intro, 4, choices, 3);
@@ -135,11 +135,14 @@ static void talk_mom(void)
 {
     heal_party();
     audio_sfx(SFX_HEAL);
+    g.heal_map = MAP_HOUSE; /* resting at home re-sets respawn */
+    g.heal_x = 5;
+    g.heal_y = 5;
     const char *lines[] = {
         "MOM: Off on an adventure?",
-        "Let me tidy you up... there!",
-        "Your creatures are fully",
-        "rested. Be careful out there!",
+        "Let me tidy you up...",
+        "There! Your creatures are",
+        "fully rested. Be careful!",
     };
     dlg_start(lines, 4);
     after_dialog = AD_NONE;
@@ -376,8 +379,8 @@ static void handle_after_dialog(void)
             bag_add(IT_ORB);
         g.flags |= FLAG_STARTER;
         const char *give[] = {
-            "PROF. MAPLE: Excellent choice!",
-            "This little one is yours now!",
+            "PROF. MAPLE: Great choice!",
+            "This one is yours now!",
             "Oh - and take these 5 ORBs.",
             "Throw one at a wild creature",
             "to catch it!",
@@ -499,7 +502,7 @@ void ow_update(void)
                 c->hp = (uint16_t)(c->hp + heal);
                 if (c->hp > c->stats[ST_HP]) c->hp = c->stats[ST_HP];
                 bag_consume((uint8_t)pending_potion);
-                char buf[64];
+                static char buf[64]; /* dialog outlives this frame */
                 snprintf(buf, sizeof(buf), "%s recovered %u HP!",
                          SPECIES[c->species].name, c->hp - before);
                 const char *lines[1];

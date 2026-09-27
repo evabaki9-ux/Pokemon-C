@@ -371,7 +371,7 @@ void bag_draw(SDL_Renderer *r)
             draw_text(r, 10, y, ">", red, 1);
         char buf[40];
         snprintf(buf, sizeof(buf), "%-14s x%u", ITEMS[g.bag[i]].name,
-                 bag_count(g.bag[i]));
+                 g.bag_qty[i]);
         draw_text(r, 22, y, buf, dark, 1);
     }
     char buf[24];

@@ -4,11 +4,11 @@
 #include <math.h>
 #include "game.h"
 
-uint16_t xp_for_level(uint8_t level)
+uint32_t xp_for_level(uint8_t level)
 {
-    /* medium-fast: n^3 */
+    /* medium-fast: n^3 - needs 32 bits: Lv41 = 68,921 > u16 */
     if (level > 100) level = 100;
-    return (uint16_t)((uint32_t)level * level * level);
+    return (uint32_t)level * level * level;
 }
 
 static uint16_t stat_calc(const Species *sp, uint8_t iv, uint8_t level, uint8_t which)
@@ -79,7 +79,7 @@ void creature_init(Creature *c, uint8_t species, uint8_t level, uint8_t random_i
 }
 
 /* returns moves learned at new levels via learn check by caller */
-void creature_add_xp(Creature *c, uint16_t amount, int *levels_gained)
+void creature_add_xp(Creature *c, uint32_t amount, int *levels_gained)
 {
     int gained = 0;
     uint32_t xp = c->xp + amount;
@@ -87,7 +87,9 @@ void creature_add_xp(Creature *c, uint16_t amount, int *levels_gained)
         c->level++;
         gained++;
     }
-    c->xp = (uint16_t)(xp > 0xFFFF ? 0xFFFF : xp);
+    if (xp > xp_for_level(100))
+        xp = xp_for_level(100); /* cap: keeps saves decodable */
+    c->xp = xp;
     if (gained > 0)
         creature_recalc_stats(c, 0);
     if (levels_gained)
@@ -125,13 +127,13 @@ DamageResult move_damage(const Creature *att, const Creature *def,
         return r; /* statuses applied by battle layer */
     }
 
-    /* effectiveness: product of per-type multipliers, 10 = 1.0x
-     * (chart values are x10-scaled, so divide by 10 per lookup) */
-    int eff10 = 10;
-    eff10 = eff10 * type_chart_lookup(mv->type, d->type1) / 10;
+    /* effectiveness: product of per-type multipliers on a x100 scale,
+     * so a double resist (0.5*0.5) stays 25, not truncated to 20 */
+    int eff100 = 100;
+    eff100 = eff100 * type_chart_lookup(mv->type, d->type1) / 10;
     if (d->type2 != TY_NONE)
-        eff10 = eff10 * type_chart_lookup(mv->type, d->type2) / 10;
-    if (eff10 == 0) {
+        eff100 = eff100 * type_chart_lookup(mv->type, d->type2) / 10;
+    if (eff100 == 0) {
         r.effectiveness = -2;
         r.damage = 0;
         return r;
@@ -151,7 +153,7 @@ DamageResult move_damage(const Creature *att, const Creature *def,
     /* Struggle is typeless: no STAB, no type effectiveness */
     if (move_id != MV_STRUGGLE) {
         if (mv->type == a->type1 || mv->type == a->type2) dmg = dmg * 15 / 10;
-        dmg = dmg * (uint32_t)eff10 / 10;
+        dmg = dmg * (uint32_t)eff100 / 100;
     }
     /* random 85-100% */
     dmg = dmg * (85 + rand() % 16) / 100;
@@ -164,8 +166,8 @@ DamageResult move_damage(const Creature *att, const Creature *def,
     if (dmg < 1) dmg = 1;
     if (dmg > def->hp) dmg = def->hp;
     r.damage = (int)dmg;
-    if (eff10 > 10) r.effectiveness = eff10 >= 20 ? 2 : 1;
-    else if (eff10 < 10) r.effectiveness = -1;
+    if (eff100 > 100) r.effectiveness = eff100 >= 200 ? 2 : 1;
+    else if (eff100 < 100) r.effectiveness = -1;
     return r;
 }
 

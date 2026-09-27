@@ -177,7 +177,7 @@ dlg_hiker = [
     "Whoa there! A landslide has",
     "closed the road north.",
     "Beat both trainers here and",
-    "I'll have it cleared for you!",
+    "I'll clear it for you!",
     None,
 ]
 dlg_villager = [
@@ -352,10 +352,10 @@ ENCS = {
         (6, 8, 10, 15),   # MOSSLING
         (7, 9, 11, 15),   # SPARKIT
         (4, 10, 12, 15),  # PEBBLY
-        (10, 16, 18, 10), # LOPPIN (evolved fluffit, evo 18)
-        (8, 16, 16, 4),   # TORRENTOL (rare evolved)
-        (9, 16, 16, 3),   # VERDANTIS (rare evolved)
-        (11, 16, 16, 3),  # PYROGON (rare evolved)
+        (10, 18, 19, 2),  # LOPPIN (evolved fluffit; evo is 18, rare)
+        (8, 16, 16, 1),   # TORRENTOL (rare evolved, at evo level)
+        (9, 16, 16, 1),   # VERDANTIS (rare evolved, at evo level)
+        (11, 16, 16, 1),  # PYROGON (rare evolved, at evo level)
     ],
 }
 

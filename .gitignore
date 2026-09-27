@@ -1,62 +1,59 @@
-# ---- OS / editor ----
-.DS_Store
-Thumbs.db
-*.swp
-*~
-.idea/
-.vscode/*
-!.vscode/settings.json.example
 
+!.env.example
+!.vscode/settings.json.example
+# ---- Node / JS / TS ----
+# ---- OS / editor ----
+# ---- Other build outputs / caches ----
+# ---- Python ----
 # ---- Secrets / local config ----
+# game build artifacts
+*.egg-info/
+*.key
+*.log
+*.pem
+*.py[cod]
+*.swp
+*.tsbuildinfo
+*~
+.DS_Store
+.cache/
+.config/
+.coverage
 .env
 .env.*
-!.env.example
-*.pem
-*.key
-.netrc
 .git-credentials
-secrets/
-
-# ---- Python ----
-__pycache__/
-*.py[cod]
-.venv/
-venv/
-env/
-*.egg-info/
-.pytest_cache/
+.idea/
+.local/
 .mypy_cache/
-.ruff_cache/
-.coverage
-htmlcov/
-dist/
-build/
-
-# ---- Node / JS / TS ----
-node_modules/
-.npm/
-.pnpm-store/
+.netrc
 .next/
+.npm/
 .nuxt/
 .output/
 .parcel-cache/
+.pnpm-store/
+.pytest_cache/
+.ruff_cache/
+.ssh/
+.sudo_as_admin_successful
 .svelte-kit/
-.vite/
 .turbo/
-*.tsbuildinfo
-npm-debug.log*
-yarn-error.log*
-
-# ---- Other build outputs / caches ----
-.cache/
-.local/
-out/
-target/
-tmp/
-*.log
-
-# game build artifacts
+.venv/
+.vite/
+.vscode/*
+Thumbs.db
+__pycache__/
+build/
+dist/
+env/
+htmlcov/
 monterra/bin/
 monterra/tools/*_preview.png
-.sudo_as_admin_successful
-.ssh/
+node_modules/
+npm-debug.log*
+out/
+secrets/
+target/
+tmp/
+venv/
+yarn-error.log*

@@ -191,12 +191,82 @@ int main(void)
         CHECK(storage_deposit(1) == 0, "redeposit for save test");
         uint8_t buf[SAVE_MAX];
         size_t n = save_encode(buf, sizeof(buf));
-        CHECK(n > 0 && n <= SAVE_MAX, "v3 save encodes with storage");
+        CHECK(n > 0 && n <= SAVE_MAX, "v4 save encodes with storage");
         g.storage_n = 99; /* trash state */
         g.party_n = 0;
-        CHECK(save_decode(buf, n), "v3 save decodes");
+        CHECK(save_decode(buf, n), "v4 save decodes");
         CHECK(g.storage_n == 1 && g.party_n == 1, "storage survives save");
         CHECK(g.storage[0].species == SP_EMBERIT, "boxed creature intact");
+
+        /* v4: 32-bit xp round-trips (Lv41 needs 68,921 xp) */
+        CHECK(xp_for_level(41) == 68921u, "xp curve L41 = 68921 (needs u32)");
+        creature_init(&g.party[0], SP_EMBERIT, 40, 0);
+        int g40 = 0;
+        creature_add_xp(&g.party[0], 5000, &g40); /* 64000 + 5000 = 69000 */
+        CHECK(g.party[0].level == 41, "L40 + 5000xp = L41, not Lv100");
+        CHECK(g.party[0].xp == 69000u, "32-bit xp stored exactly");
+        n = save_encode(buf, sizeof(buf));
+        g.party[0].xp = 3;
+        CHECK(save_decode(buf, n), "v4 save with big xp decodes");
+        CHECK(g.party[0].xp == 69000u && g.party[0].level == 41,
+              "big xp survives save round trip");
+    }
+
+    /* an old v3 save (u16 xp, no bag quantities) still loads */
+    {
+        uint8_t b[256];
+        size_t k = 0;
+        b[k++] = 'M'; b[k++] = 'N'; b[k++] = 'T'; b[k++] = 'S';
+        b[k++] = 3;                      /* version */
+        b[k++] = MAP_HOUSE;              /* map */
+        b[k++] = 5 * 16; b[k++] = 0;     /* px */
+        b[k++] = 6 * 16; b[k++] = 0;     /* py */
+        b[k++] = 0;                      /* dir */
+        b[k++] = 1;                      /* party_n */
+        b[k++] = 0;                      /* active_slot */
+        /* creature: species, level, xp(u16), hp(u16), 6 stats(u16),
+         * 6 ivs, 4 moves, 4 pp, ailment, sleep_turns */
+        b[k++] = SP_EMBERIT; b[k++] = 7;
+        b[k++] = 343; b[k++] = 1;        /* xp = 343 */
+        b[k++] = 20; b[k++] = 0;         /* hp */
+        for (int i = 0; i < 6; i++) { b[k++] = 20; b[k++] = 0; }
+        for (int i = 0; i < 6; i++) b[k++] = 16;
+        b[k++] = 0;                      /* moves[0]=TACKLE */
+        b[k++] = 0xFF; b[k++] = 0xFF; b[k++] = 0xFF;
+        for (int i = 0; i < 4; i++) b[k++] = 30;
+        b[k++] = 0; b[k++] = 0;          /* ailment, sleep */
+        b[k++] = 1;                      /* bag_n */
+        b[k++] = IT_ORB;                 /* no qty byte in v3 */
+        b[k++] = 999 & 0xFF; b[k++] = 999 >> 8;
+        b[k++] = FLAG_STARTER;
+        for (int i = 0; i < 2; i++) b[k++] = 0; /* dex_seen */
+        for (int i = 0; i < 2; i++) b[k++] = 0; /* dex_caught */
+        b[k++] = MAP_HEAL; b[k++] = 3; b[k++] = 5;
+        b[k++] = 0;                      /* storage_n */
+        memset(g.dex_seen, 0xFF, sizeof(g.dex_seen));
+        CHECK(save_decode(b, k), "v3 save still loads");
+        CHECK(g.party[0].xp == 343u, "v3 xp widened to 32-bit");
+        CHECK(bag_count(IT_ORB) == 1, "v3 bag slots get qty 1");
+    }
+
+    /* bag stacking: same item piles into one slot */
+    {
+        g.bag_n = 0;
+        memset(g.bag_qty, 0, sizeof(g.bag_qty));
+        bag_add(IT_ORB);
+        bag_add(IT_ORB);
+        bag_add(IT_ORB);
+        CHECK(g.bag_n == 1 && bag_count(IT_ORB) == 3,
+              "three orbs stack into one row");
+        bag_add(IT_POTION);
+        CHECK(g.bag_n == 2, "different item takes a new row");
+        bag_consume(IT_ORB);
+        CHECK(bag_count(IT_ORB) == 2 && g.bag_n == 2,
+              "consume decrements the stack");
+        bag_consume(IT_ORB);
+        bag_consume(IT_ORB);
+        CHECK(bag_count(IT_ORB) == 0 && g.bag[0] == IT_POTION,
+              "empty stack drops and shifts rows");
     }
 
     /* status expansion: new ailments + moves */
@@ -262,6 +332,8 @@ int main(void)
     g.bag_n = 2;
     g.bag[0] = IT_ORB;
     g.bag[1] = IT_POTION;
+    g.bag_qty[0] = 1;
+    g.bag_qty[1] = 1;
     g.money = 999;
     g.flags = FLAG_STARTER | FLAG_T1;
     g.dex_seen[0] = 0x0F;
