@@ -31,7 +31,7 @@ enum { TY_NORMAL, TY_FIRE, TY_WATER, TY_GRASS, TY_ELECTRIC, TY_ROCK, TY_FLYING, 
 enum { ST_HP, ST_ATK, ST_DEF, ST_SAT, ST_SDF, ST_SPE };
 
 /* ---- ailments ---- */
-enum { AIL_NONE, AIL_BURN, AIL_PARA, AIL_SLEEP, AIL_POISON, AIL_FREEZE, AIL_CONFUSION };
+enum { AIL_NONE, AIL_BURN, AIL_PARA, AIL_SLEEP, AIL_POISON, AIL_FREEZE, AIL_CONFUSION, AIL_COUNT };
 
 /* ---- moves ---- */
 enum { MC_PHYS, MC_SPEC, MC_STATUS };
@@ -255,6 +255,8 @@ DamageResult move_damage(const Creature *att, const Creature *def, const int8_t 
                          const int8_t def_st[6], uint8_t move_id);
 int catch_shakes(const Creature *wild, int ball_x10);
 bool learn_move(Creature *c, uint8_t move_id, int *replaced);
+bool tile_char_walkable(char t);        /* shared by movement + save checks */
+int confusion_self_damage(const Creature *c);
 int pick_enemy_move(const Creature *enemy, const Creature *player);
 const char *type_name(uint8_t t);
 /* PC storage */

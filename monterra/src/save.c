@@ -114,9 +114,24 @@ static bool load_creature(Rd *r, Creature *c, bool xp32)
         return false;
     if (c->hp > c->stats[ST_HP])
         return false;
-    for (int i = 0; i < 4; i++)
-        if (c->moves[i] != 0xFF && c->moves[i] >= NUM_MOVES)
+    for (int i = 0; i < 4; i++) {
+        if (c->moves[i] == 0xFF) {
+            if (c->pp[i] != 0)
+                return false; /* empty slot with leftover PP */
+            continue;
+        }
+        if (c->moves[i] >= NUM_MOVES)
             return false;
+        if (c->pp[i] > MOVES[c->moves[i]].pp)
+            return false; /* more PP than the move allows */
+    }
+    if (c->ailment >= AIL_COUNT)
+        return false;
+    /* level and xp must agree (rejects hand-edited levels) */
+    if (c->xp < xp_for_level(c->level))
+        return false;
+    if (c->level < 100 && c->xp >= xp_for_level((uint8_t)(c->level + 1)))
+        return false;
     return true;
 }
 
@@ -210,10 +225,20 @@ bool save_decode(const uint8_t *buf, size_t len)
                 return false;
     }
 
-    /* position must be on the map */
+    /* position must be on the map and on walkable ground */
     const MapDef *m = &MAPS[t.map];
     if (t.px / 16 >= m->w || t.py / 16 >= m->h)
         return false;
+    if (!tile_char_walkable(m->rows[t.py / 16][t.px / 16]))
+        return false; /* e.g. inside a tree or a wall */
+    /* respawn point must be valid too, or a whiteout gets you stuck */
+    {
+        const MapDef *hm = &MAPS[t.heal_map];
+        if (t.heal_x >= hm->w || t.heal_y >= hm->h)
+            return false;
+        if (!tile_char_walkable(hm->rows[t.heal_y][t.heal_x]))
+            return false;
+    }
 
     /* commit */
     t.mode = MODE_OVERWORLD;

@@ -13,6 +13,41 @@ static int failures = 0;
     else { printf("ok:   %s\n", msg); } \
 } while (0)
 
+/* builds a valid old-format (v3) save with knobs for abuse:
+ * ailment, level, xp, first move's PP, heal point, player tile */
+static size_t mkv3(uint8_t *b, uint8_t ail, uint8_t lvl, uint16_t xp,
+                   uint8_t pp0, uint8_t hx, uint8_t hy,
+                   uint8_t ptx, uint8_t pty)
+{
+    size_t k = 0;
+    b[k++] = 'M'; b[k++] = 'N'; b[k++] = 'T'; b[k++] = 'S';
+    b[k++] = 3;                          /* version */
+    b[k++] = MAP_HOUSE;                  /* map */
+    b[k++] = (uint8_t)(ptx * 16); b[k++] = 0;
+    b[k++] = (uint8_t)(pty * 16); b[k++] = 0;
+    b[k++] = 0;                          /* dir */
+    b[k++] = 1;                          /* party_n */
+    b[k++] = 0;                          /* active_slot */
+    b[k++] = SP_EMBERIT; b[k++] = lvl;
+    b[k++] = (uint8_t)(xp & 0xFF); b[k++] = (uint8_t)(xp >> 8);
+    b[k++] = 20; b[k++] = 0;             /* hp */
+    for (int i = 0; i < 6; i++) { b[k++] = 20; b[k++] = 0; } /* stats */
+    for (int i = 0; i < 6; i++) b[k++] = 16;                 /* ivs */
+    b[k++] = 0;                          /* moves[0] = TACKLE */
+    b[k++] = 0xFF; b[k++] = 0xFF; b[k++] = 0xFF;
+    b[k++] = pp0; b[k++] = 0; b[k++] = 0; b[k++] = 0;        /* pp */
+    b[k++] = ail; b[k++] = 0;            /* ailment, sleep_turns */
+    b[k++] = 1;                          /* bag_n */
+    b[k++] = IT_ORB;                     /* no qty byte in v3 */
+    b[k++] = 999 & 0xFF; b[k++] = (uint8_t)(999 >> 8);
+    b[k++] = FLAG_STARTER;
+    for (int i = 0; i < 2; i++) b[k++] = 0; /* dex_seen */
+    for (int i = 0; i < 2; i++) b[k++] = 0; /* dex_caught */
+    b[k++] = MAP_HEAL; b[k++] = hx; b[k++] = hy;
+    b[k++] = 0;                          /* storage_n */
+    return k;
+}
+
 int main(void)
 {
     srand(42);
@@ -40,13 +75,16 @@ int main(void)
     creature_init(&d1, SP_EMBERIT, 5, 0);
     creature_init(&d2, SP_FLUFFIT, 4, 0);
     int8_t none[6] = { 0 };
-    DamageResult r = move_damage(&d1, &d2, none, none, 0 /* TACKLE */);
-    CHECK(!r.missed || 1, "tackle resolved");
-    if (!r.missed) {
-        CHECK(r.damage >= 1 && r.damage <= (int)d2.hp, "damage within bounds");
-        CHECK(r.damage < (int)d2.hp, "neutral tackle does not 1HKO (eff10 bug)");
-        CHECK(r.effectiveness == 0, "neutral hit is not super effective");
+    DamageResult r;
+    int tries;
+    for (tries = 0; tries < 500; tries++) { /* retry past misses */
+        r = move_damage(&d1, &d2, none, none, 0 /* TACKLE */);
+        if (!r.missed) break;
     }
+    CHECK(!r.missed, "tackle resolved");
+    CHECK(r.damage >= 1 && r.damage <= (int)d2.hp, "damage within bounds");
+    CHECK(r.damage < (int)d2.hp, "neutral tackle does not 1HKO (eff10 bug)");
+    CHECK(r.effectiveness == 0, "neutral hit is not super effective");
     /* fire vs bug+grass = 4x, but sane: not a x10 blowup */
     Creature moss;
     creature_init(&moss, SP_MOSSLING, 5, 0);
@@ -55,14 +93,17 @@ int main(void)
         if (MOVES[m].type == TY_FIRE && MOVES[m].power > 0)
             { ember_id = m; break; }
     CHECK(ember_id != 0xFF, "found a fire damage move");
-    DamageResult rf = move_damage(&d1, &moss, none, none, ember_id);
-    if (!rf.missed) {
-        CHECK(rf.effectiveness >= 1, "fire vs bug/grass is super effective");
-        CHECK(rf.damage <= (int)moss.hp, "4x hit still bounded");
-        /* 4x of a ~5-7 base is 20-28 vs 20 HP: can KO, but must not be
-         * ~10x that (the old bug gave 100x+) */
-        CHECK(rf.damage <= 40, "4x hit is not a x10 blowup");
+    DamageResult rf;
+    for (tries = 0; tries < 500; tries++) {
+        rf = move_damage(&d1, &moss, none, none, ember_id);
+        if (!rf.missed) break;
     }
+    CHECK(!rf.missed, "fire move resolved");
+    CHECK(rf.effectiveness >= 1, "fire vs bug/grass is super effective");
+    CHECK(rf.damage <= (int)moss.hp, "4x hit still bounded");
+    /* 4x of a ~5-7 base is 20-28 vs 20 HP: can KO, but must not be
+     * ~10x that (the old bug gave 100x+) */
+    CHECK(rf.damage <= 40, "4x hit is not a x10 blowup");
 
     /* stat stages */
     CHECK(stat_after_stage(100, 1) == 150, "stage +1 = 1.5x");
@@ -173,6 +214,12 @@ int main(void)
     /* PC storage */
     {
         memset(&g, 0, sizeof(g));
+        g.map = MAP_HOUSE; /* decodes validate position + heal point */
+        g.px = 5 * 16;
+        g.py = 6 * 16;
+        g.heal_map = MAP_HOUSE;
+        g.heal_x = 5;
+        g.heal_y = 5;
         g.party_n = 2;
         creature_init(&g.party[0], SP_EMBERIT, 8, 0);
         creature_init(&g.party[1], SP_FLUFFIT, 6, 0);
@@ -212,41 +259,38 @@ int main(void)
               "big xp survives save round trip");
     }
 
-    /* an old v3 save (u16 xp, no bag quantities) still loads */
+    /* confusion self-hit: typeless, no crit, no STAB */
     {
-        uint8_t b[256];
-        size_t k = 0;
-        b[k++] = 'M'; b[k++] = 'N'; b[k++] = 'T'; b[k++] = 'S';
-        b[k++] = 3;                      /* version */
-        b[k++] = MAP_HOUSE;              /* map */
-        b[k++] = 5 * 16; b[k++] = 0;     /* px */
-        b[k++] = 6 * 16; b[k++] = 0;     /* py */
-        b[k++] = 0;                      /* dir */
-        b[k++] = 1;                      /* party_n */
-        b[k++] = 0;                      /* active_slot */
-        /* creature: species, level, xp(u16), hp(u16), 6 stats(u16),
-         * 6 ivs, 4 moves, 4 pp, ailment, sleep_turns */
-        b[k++] = SP_EMBERIT; b[k++] = 7;
-        b[k++] = 343; b[k++] = 1;        /* xp = 343 */
-        b[k++] = 20; b[k++] = 0;         /* hp */
-        for (int i = 0; i < 6; i++) { b[k++] = 20; b[k++] = 0; }
-        for (int i = 0; i < 6; i++) b[k++] = 16;
-        b[k++] = 0;                      /* moves[0]=TACKLE */
-        b[k++] = 0xFF; b[k++] = 0xFF; b[k++] = 0xFF;
-        for (int i = 0; i < 4; i++) b[k++] = 30;
-        b[k++] = 0; b[k++] = 0;          /* ailment, sleep */
-        b[k++] = 1;                      /* bag_n */
-        b[k++] = IT_ORB;                 /* no qty byte in v3 */
-        b[k++] = 999 & 0xFF; b[k++] = 999 >> 8;
-        b[k++] = FLAG_STARTER;
-        for (int i = 0; i < 2; i++) b[k++] = 0; /* dex_seen */
-        for (int i = 0; i < 2; i++) b[k++] = 0; /* dex_caught */
-        b[k++] = MAP_HEAL; b[k++] = 3; b[k++] = 5;
-        b[k++] = 0;                      /* storage_n */
+        Creature cc;
+        creature_init(&cc, SP_FLUFFIT, 20, 0);
+        int sd = confusion_self_damage(&cc);
+        CHECK(sd >= 1 && sd <= (int)cc.hp, "confusion self-hit bounded");
+        cc.ailment = AIL_BURN;
+        int sdb = confusion_self_damage(&cc);
+        CHECK(sdb >= 1 && sdb <= sd + 1, "burn weakens the self-hit");
+    }
+
+    /* an old v3 save (u16 xp, no bag quantities) still loads, and the
+     * decoder rejects hand-edited / corrupt data instead of stranding
+     * the player */
+    {
+        uint8_t b[128];
+        size_t n3 = mkv3(b, 0, 7, 343, 30, 3, 5, 5, 6);
         memset(g.dex_seen, 0xFF, sizeof(g.dex_seen));
-        CHECK(save_decode(b, k), "v3 save still loads");
+        CHECK(save_decode(b, n3), "v3 save still loads");
         CHECK(g.party[0].xp == 343u, "v3 xp widened to 32-bit");
         CHECK(bag_count(IT_ORB) == 1, "v3 bag slots get qty 1");
+
+        mkv3(b, 0, 7, 343, 30, 200, 200, 5, 6);
+        CHECK(!save_decode(b, n3), "respawn point off the map rejected");
+        mkv3(b, 0, 7, 343, 30, 3, 5, 0, 0);
+        CHECK(!save_decode(b, n3), "player standing in a wall rejected");
+        mkv3(b, 0, 7, 343, 250, 3, 5, 5, 6);
+        CHECK(!save_decode(b, n3), "PP above the move's max rejected");
+        mkv3(b, AIL_COUNT, 7, 343, 30, 3, 5, 5, 6);
+        CHECK(!save_decode(b, n3), "unknown ailment id rejected");
+        mkv3(b, 0, 10, 343, 30, 3, 5, 5, 6);
+        CHECK(!save_decode(b, n3), "level / xp mismatch rejected");
     }
 
     /* bag stacking: same item piles into one slot */

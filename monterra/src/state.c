@@ -24,10 +24,11 @@ void bag_add(uint8_t item)
 
 int bag_count(uint8_t item)
 {
+    int n = 0;
     for (int i = 0; i < g.bag_n; i++)
         if (g.bag[i] == item)
-            return g.bag_qty[i];
-    return 0;
+            n += g.bag_qty[i]; /* sums split stacks (e.g. 99 + 1) */
+    return n;
 }
 
 void bag_consume(uint8_t item)

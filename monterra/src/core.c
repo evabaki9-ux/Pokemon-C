@@ -4,6 +4,37 @@
 #include <math.h>
 #include "game.h"
 
+bool tile_char_walkable(char t)
+{
+    /* single source of truth for 'can you stand here'; the ledge 'L'
+     * is deliberately NOT walkable here - ledges are hop-only, and
+     * neither the player nor a respawn point may stand on one */
+    switch (t) {
+    case '.': case ',': case '"': case 'P': case '=':
+    case 'D': case 'H': case 'M': case '_':
+    case 'r': case 'g': case 's':
+        return true;
+    default:
+        return false;
+    }
+}
+
+int confusion_self_damage(const Creature *c)
+{
+    /* classic rules: a typeless 40-power physical self-hit - no STAB,
+     * no type chart, no critical hit (burn's attack drop still applies,
+     * as the creature is attacking with its own weakened Attack) */
+    uint32_t A = c->stats[ST_ATK];
+    uint32_t D = c->stats[ST_DEF] ? c->stats[ST_DEF] : 1;
+    if (c->ailment == AIL_BURN)
+        A /= 2;
+    uint32_t dmg = ((2 * c->level / 5 + 2) * 40 * A / D) / 50 + 2;
+    dmg = dmg * (85 + (uint32_t)(rand() % 16)) / 100;
+    if (dmg < 1) dmg = 1;
+    if (dmg > c->hp) dmg = c->hp;
+    return (int)dmg;
+}
+
 uint32_t xp_for_level(uint8_t level)
 {
     /* medium-fast: n^3 - needs 32 bits: Lv41 = 68,921 > u16 */

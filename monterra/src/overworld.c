@@ -28,13 +28,9 @@ static int tile_at(int x, int y)
 
 static bool tile_solid(int t)
 {
-    switch (t) {
-    case '.': case ',': case '"': case 'P': case '=': case 'L':
-    case 'D': case 'H': case 'M': case '_': case 'r': case 'g': case 's':
-        return false;
-    default:
-        return true;
-    }
+    if (t == 'L')
+        return false; /* ledge: hop-only, handled in try_move */
+    return !tile_char_walkable((char)t);
 }
 
 static bool npc_present(const NpcDef *n)

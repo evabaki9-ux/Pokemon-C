@@ -31,6 +31,7 @@ enum {
     BS_SWITCH_IN, /* a=party slot: send creature out */
     BS_ENEMY_NEXT,/* trainer sends next creature */
     BS_LEARN,     /* a=move id: learn it (asks before replacing) */
+    BS_EVOLVE,    /* a=species: evolve the active creature */
     BS_END,       /* a=result code: battle finishes */
 };
 
@@ -45,6 +46,7 @@ static Step q[QMAX];
 static int qlen, qhead, qins;
 static char msgpool[MSGPOOL][2][76];
 static int pool_next;
+static int learn_stage; /* 0 = forget-or-skip, 1 = pick the move */
 
 static void q_clear(void)
 {
@@ -79,7 +81,7 @@ static void qf(uint8_t kind, uint8_t a, uint8_t b, const char *l1, const char *l
 }
 
 /* ---- battle state ---- */
-enum { BP_MENU, BP_FIGHT, BP_BAG, BP_PARTY, BP_EXEC, BP_DONE };
+enum { BP_MENU, BP_FIGHT, BP_BAG, BP_PARTY, BP_TARGET, BP_EXEC, BP_DONE };
 
 static struct {
     bool active, over, trainer;
@@ -94,6 +96,7 @@ static struct {
     int shake_timer;
     int run_attempts;
     uint8_t result;
+    uint8_t potion_item; /* BP_TARGET: item awaiting a party target */
     bool forced_switch;
     bool switch_done; /* set when a voluntary switch was performed */
 } B;
@@ -242,9 +245,7 @@ static void resolve_move(uint8_t actor, uint8_t slot)
         } else if (rand() % 3 == 0) {
             q_msgf("%s is confused!", an);
             q_msg("It hurt itself in confusion!", NULL);
-            int8_t z[6] = { 0 };
-            DamageResult sr = move_damage(att, att, z, z, MV_TACKLE);
-            int nh = att->hp - (sr.damage > 0 ? sr.damage : 1);
+            int nh = att->hp - confusion_self_damage(att);
             att->hp = (uint16_t)(nh < 0 ? 0 : nh);
             qf(BS_WAIT_HP, 0, 0, NULL, NULL);
             return;
@@ -341,9 +342,12 @@ static void resolve_move(uint8_t actor, uint8_t slot)
     }
     /* secondary effects */
     if (def->hp > 0 && mv->effect_chance > 0 && rand() % 100 < mv->effect_chance) {
+        bool fire_immune = mv->effect == ME_BURN &&
+            (SPECIES[def->species].type1 == TY_FIRE ||
+             SPECIES[def->species].type2 == TY_FIRE);
         if ((mv->effect == ME_BURN || mv->effect == ME_PARA ||
              mv->effect == ME_POISON || mv->effect == ME_FREEZE) &&
-            def->ailment == AIL_NONE) {
+            def->ailment == AIL_NONE && !fire_immune) {
             def->ailment = (mv->effect == ME_BURN) ? AIL_BURN :
                            (mv->effect == ME_PARA) ? AIL_PARA :
                            (mv->effect == ME_POISON) ? AIL_POISON : AIL_FREEZE;
@@ -412,9 +416,9 @@ static void build_turn(int pslot) /* pslot < 0: forced Struggle */
 /* ---- xp / level / learn / evolve ---- */
 static void resolve_xp(void)
 {
+    /* XP goes to the active creature even if it fainted to recoil a
+     * moment after landing the knockout (classic participant rule) */
     Creature *c = pc();
-    if (c->hp == 0)
-        return; /* no xp for a fainted participant (v1: active only) */
     uint32_t xp = (uint32_t)SPECIES[B.enemy.species].xp_yield * B.enemy.level / 7;
     if (B.trainer)
         xp = xp * 3 / 2;
@@ -425,35 +429,57 @@ static void resolve_xp(void)
     q_msgf("%s gained %u EXP!", pname(), (unsigned)xp);
     if (gained > 0)
         q_msgf("%s grew to Lv%u!", pname(), c->level);
-    /* new moves learned between old level and new level */
+    /* evolution runs first (as a queued step, so the species changes
+     * at the right moment and learn prompts show the final name);
+     * the learnset is then read from the evolved form, like the
+     * classics: evolve, then learn */
     const Species *sp = &SPECIES[c->species];
+    uint8_t final_sp = c->species;
+    if (sp->evolve_level > 0 && c->level >= sp->evolve_level) {
+        final_sp = sp->evolve_to;
+        qf(BS_EVOLVE, final_sp, 0, NULL, NULL);
+    }
+    /* new moves learned between old level and new level */
+    sp = &SPECIES[final_sp];
     for (int i = 0; i < LEARN_MAX && sp->learn[i] != LEARN_END; i++) {
         uint8_t lvl = (uint8_t)(sp->learn[i] >> 8);
         if (lvl > oldlvl && lvl <= c->level)
             qf(BS_LEARN, (uint8_t)(sp->learn[i] & 0xFF), 0, NULL, NULL);
-    }
-    /* evolution */
-    sp = &SPECIES[c->species];
-    if (sp->evolve_level > 0 && c->level >= sp->evolve_level) {
-        char oldname[24];
-        snprintf(oldname, sizeof(oldname), "%s", sp->name);
-        uint8_t evolved = sp->evolve_to;
-        q_msgf("What? %s is evolving!", oldname);
-        c->species = evolved;
-        creature_recalc_stats(c, 1);
-        dex_own(evolved);
-        char el1[48], el2[48];
-        snprintf(el1, sizeof el1, "Congratulations! %s", oldname);
-        snprintf(el2, sizeof el2, "evolved into %s!", SPECIES[evolved].name);
-        q_msg(el1, el2);
     }
 }
 
 /* ---- checks ---- */
 static void resolve_check(void)
 {
-    /* player faint checked first: on a Struggle-recoil double KO the
-     * player's creature fainted last, so the player loses the exchange */
+    /* double KO (Struggle recoil): your hit dropped the enemy first,
+     * your recoil landed after it - you keep the knockout and the EXP,
+     * then the battle resolves honestly (classic draw rule) */
+    if (B.enemy.hp == 0 && pc()->hp == 0) {
+        bool any = false;
+        for (int i = 0; i < g.party_n; i++)
+            if (g.party[i].hp > 0) { any = true; break; }
+        q_clear();
+        qf(BS_FAINT, 1, 0, NULL, NULL);
+        q_msgf(B.trainer ? "Enemy %s fainted!" : "Wild %s fainted!", ename());
+        qf(BS_XP, 0, 0, NULL, NULL);
+        if (!any) {
+            q_msg("Out of usable creatures!", NULL);
+            q_msg("You rushed home to rest...", NULL);
+            qf(BS_END, 1, 0, NULL, NULL);
+        } else if (B.trainer && B.trainer_next + 1 < B.tdef->count) {
+            qf(BS_ENEMY_NEXT, 0, 0, NULL, NULL);
+            B.forced_switch = true; /* your active fainted too */
+        } else if (B.trainer) {
+            q_msgf("You defeated %s!", B.tdef->name);
+            g.money = (uint16_t)(g.money + B.tdef->reward);
+            if (g.money > 9999) g.money = 9999;
+            q_msgf("You got $%u for winning!", B.tdef->reward);
+            qf(BS_END, 3, 0, NULL, NULL);
+        } else {
+            qf(BS_END, 0, 0, NULL, NULL);
+        }
+        return;
+    }
     if (pc()->hp == 0) {
         q_clear();
         qf(BS_FAINT, 0, 0, NULL, NULL);
@@ -635,17 +661,31 @@ void battle_update(void)
             if (qhead < qlen && q[qhead].kind == BS_MSG)
                 q_pop();
             else if (qhead < qlen && q[qhead].kind == BS_LEARN) {
-                uint8_t mv = q[qhead].a;
-                q_pop();
-                if (g_dlg.result == 0) { /* FORGET the oldest move */
-                    int replaced = -1;
-                    learn_move(pc(), mv, &replaced);
-                    if (replaced >= 0) {
-                        q_msgf("Forgot %s...", MOVES[replaced].name);
+                if (learn_stage == 0 && g_dlg.result == 0) {
+                    /* FORGET: now pick WHICH move goes */
+                    learn_stage = 1;
+                    const char *lns[2] = { "Forget which move?",
+                                           "(B keeps all moves)" };
+                    const char *chs[4];
+                    for (int i = 0; i < 4; i++)
+                        chs[i] = MOVES[pc()->moves[i]].name;
+                    dlg_start_choice(lns, 2, chs, 4);
+                } else {
+                    uint8_t mv = q[qhead].a;
+                    int slot = (learn_stage == 1) ? g_dlg.result : -1;
+                    learn_stage = 0;
+                    q_pop();
+                    if (slot >= 0 && slot < 4) {
+                        char forgot[48];
+                        snprintf(forgot, sizeof forgot, "Forgot %s...",
+                                 MOVES[pc()->moves[slot]].name);
+                        pc()->moves[slot] = mv;
+                        pc()->pp[slot] = MOVES[mv].pp;
+                        q_msg(forgot, NULL);
                         q_msgf("And learned %s!", MOVES[mv].name);
+                    } else { /* SKIP, or B at either stage */
+                        q_msgf("Did not learn %s.", MOVES[mv].name);
                     }
-                } else { /* SKIP or B */
-                    q_msgf("Did not learn %s.", MOVES[mv].name);
                 }
             }
         }
@@ -697,14 +737,16 @@ void battle_update(void)
                 q_msgf("Learned %s!", MOVES[mv].name);
                 return;
             }
-            /* knows 4 moves: never replace silently - ask the player */
-            static char l1[48], l2[48], l3[48];
+            /* knows 4 moves: ask what to forget - never silently
+             * replace, and the player picks WHICH move, not always
+             * the oldest */
+            static char l1[48], l2[48];
             snprintf(l1, sizeof l1, "%s wants to learn", pname());
             snprintf(l2, sizeof l2, "%s!", MOVES[mv].name);
-            snprintf(l3, sizeof l3, "Forget %s?", MOVES[c->moves[0]].name);
-            const char *lines[3] = { l1, l2, l3 };
+            const char *lines[2] = { l1, l2 };
             const char *ch[2] = { "FORGET", "SKIP" };
-            dlg_start_choice(lines, 3, ch, 2);
+            learn_stage = 0;
+            dlg_start_choice(lines, 2, ch, 2);
             return; /* resolved when the dialog completes */
         }
         case BS_FAINT:
@@ -748,6 +790,19 @@ void battle_update(void)
         case BS_SWITCH_IN:
             send_out(s.a);
             break;
+        case BS_EVOLVE: {
+            char oldname[24];
+            snprintf(oldname, sizeof(oldname), "%s", SPECIES[pc()->species].name);
+            q_msgf("What? %s is evolving!", oldname);
+            pc()->species = s.a;
+            creature_recalc_stats(pc(), 1);
+            dex_own(s.a);
+            char el1[48], el2[48];
+            snprintf(el1, sizeof el1, "Congratulations! %s", oldname);
+            snprintf(el2, sizeof el2, "evolved into %s!", SPECIES[s.a].name);
+            q_msg(el1, el2);
+            break;
+        }
         case BS_ENEMY_NEXT: {
             B.trainer_next++;
             creature_init(&B.enemy, B.tdef->species[B.trainer_next],
@@ -792,7 +847,7 @@ void battle_update(void)
                 B.forced_switch = false;
                 send_out(slot);
                 q_msgf("Go! %s!", pname());
-                enemy_turn();
+                qf(BS_MENU, 0, 0, NULL, NULL); /* no free enemy hit after a KO */
             } else {
                 party_open(PM_SWITCH); /* must choose */
             }
@@ -883,26 +938,17 @@ void battle_update(void)
             if (item < 0) {
                 B.phase = BP_MENU;
             } else if (ITEMS[item].kind == IK_ORB) {
-                resolve_throw((uint8_t)item);
-            } else { /* potion on active creature */
-                Creature *c = pc();
-                if (c->hp == 0) {
-                    q_msg("It's fainted! It needs a", "real rest first.");
-                    qf(BS_MENU, 0, 0, NULL, NULL);
-                } else if (c->hp >= c->stats[ST_HP]) {
-                    q_msg("It won't have any effect.", NULL);
+                if (g.party_n >= MAX_PARTY && g.storage_n >= STORAGE_MAX) {
+                    /* refuse the throw: both party and box are full */
+                    q_msg("No room in party or box!", NULL);
                     qf(BS_MENU, 0, 0, NULL, NULL);
                 } else {
-                    bag_consume((uint8_t)item);
-                    uint16_t before = c->hp;
-                    c->hp = (uint16_t)(c->hp + ITEMS[item].power);
-                    if (c->hp > c->stats[ST_HP]) c->hp = c->stats[ST_HP];
-                    (void)before;
-                    q_msgf("You used a %s!", ITEMS[item].name);
-                    qf(BS_WAIT_HP, 0, 0, NULL, NULL);
-                    q_msgf("%s recovered HP!", pname());
-                    enemy_turn();
+                    resolve_throw((uint8_t)item);
                 }
+            } else { /* potion: pick who gets it, like the classics */
+                B.potion_item = (uint8_t)item;
+                B.phase = BP_TARGET;
+                party_open(PM_TARGET);
             }
         }
         break;
@@ -915,6 +961,35 @@ void battle_update(void)
                 B.phase = BP_MENU;
             } else {
                 do_switch(slot);
+            }
+        }
+        break;
+    case BP_TARGET: /* potion target chosen */
+        party_update();
+        if (!party_active()) {
+            int slot = party_result();
+            B.phase = BP_EXEC;
+            if (slot < 0) {
+                B.phase = BP_MENU; /* cancelled: item kept */
+            } else {
+                Creature *c = &g.party[slot];
+                if (c->hp == 0) {
+                    q_msg("It's fainted! It needs a", "real rest first.");
+                    qf(BS_MENU, 0, 0, NULL, NULL);
+                } else if (c->hp >= c->stats[ST_HP]) {
+                    q_msg("It won't have any effect.", NULL);
+                    qf(BS_MENU, 0, 0, NULL, NULL);
+                } else {
+                    bag_consume(B.potion_item);
+                    uint16_t before = c->hp;
+                    c->hp = (uint16_t)(c->hp + ITEMS[B.potion_item].power);
+                    if (c->hp > c->stats[ST_HP]) c->hp = c->stats[ST_HP];
+                    q_msgf("You used a %s!", ITEMS[B.potion_item].name);
+                    qf(BS_WAIT_HP, 0, 0, NULL, NULL);
+                    q_msgf("%s recovered %u HP!",
+                           SPECIES[c->species].name, c->hp - before);
+                    enemy_turn();
+                }
             }
         }
         break;

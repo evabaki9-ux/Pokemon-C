@@ -200,8 +200,8 @@ void draw_xpbar(SDL_Renderer *r, int x, int y, int w, const Creature *c)
     if (c->level >= 100) {
         pct = (uint32_t)w;
     } else {
-        uint16_t base = xp_for_level(c->level);
-        uint16_t next = xp_for_level((uint8_t)(c->level + 1));
+        uint32_t base = xp_for_level(c->level);
+        uint32_t next = xp_for_level((uint8_t)(c->level + 1));
         if (next > base)
             pct = (uint32_t)(c->xp - base) * (uint32_t)w / (uint32_t)(next - base);
     }
@@ -224,27 +224,31 @@ static struct {
     bool active;
 } pm;
 
-void party_open(int mode)
-{
-    pm.mode = mode;
-    pm.cursor = 0;
-    pm.result = -2;
-    pm.active = true;
-}
-
-bool party_active(void) { return pm.active; }
-int party_result(void) { return pm.result; }
-
 static int pickable(int slot)
 {
     if (slot >= g.party_n)
         return 0;
     if (pm.mode == PM_SWITCH)
         return slot != g.active_slot && g.party[slot].hp > 0;
-    if (pm.mode == PM_TARGET)
-        return g.party[slot].hp > 0;
+    /* PM_TARGET allows picking a fainted partner: the caller then
+     * explains why a potion won't work on it */
     return 1;
 }
+
+void party_open(int mode)
+{
+    pm.mode = mode;
+    pm.result = -2;
+    pm.active = true;
+    pm.cursor = 0;
+    /* start on the first slot that can actually be picked, so pressing
+     * A right away does something (not e.g. the fainted active slot) */
+    for (int i = 0; i < g.party_n && i < MAX_PARTY; i++)
+        if (pickable(i)) { pm.cursor = (uint8_t)i; break; }
+}
+
+bool party_active(void) { return pm.active; }
+int party_result(void) { return pm.result; }
 
 void party_update(void)
 {
@@ -254,7 +258,7 @@ void party_update(void)
      * (fixes the freeze when opening TEAM in battle with no healthy
      * switchable partners) */
     int exclude = (pm.mode == PM_SWITCH) ? g.active_slot : -1;
-    bool need_hp = (pm.mode == PM_SWITCH || pm.mode == PM_TARGET);
+    bool need_hp = (pm.mode == PM_SWITCH); /* PM_TARGET may point at fainted */
     if (g_in.pressed[BTN_UP]) {
         int c = party_pick_cursor(g.party, g.party_n, exclude, need_hp,
                                   pm.cursor, -1);
